@@ -60,8 +60,6 @@ function AreaChart_({
 
   const id = gradientId ?? `grad-${Math.random().toString(36).slice(2, 8)}`
 
-  const fmt = formatValue ?? ((v: number) => v.toFixed(1))
-
   const resolve = useCallback(
     (svgX: number): TooltipPoint | null => {
       if (data.length === 0 || stepX === 0) return null
@@ -77,11 +75,11 @@ function AreaChart_({
         cx,
         cy,
         color,
-        valueText: fmt(v),
+        valueText: formatValue ? formatValue(v) : v.toFixed(1),
         subText: t ? formatTipTime(t) : undefined,
       }
     },
-    [data, stepX, pad.left, pad.top, innerH, yMin, yMax, range, times, color, fmt],
+    [data, stepX, pad.left, pad.top, innerH, yMin, yMax, range, times, color, formatValue],
   )
 
   const tooltip = useChartTooltip({
@@ -119,17 +117,15 @@ function AreaChart_({
         ] as [number, number]),
   )
   let drawing = false
-  const path = pts
-    .map((point) => {
-      if (!point) {
-        drawing = false
-        return ''
-      }
-      const command = `${drawing ? 'L' : 'M'}${point[0]},${point[1]}`
-      drawing = true
-      return command
-    })
-    .join(' ')
+  let path = ''
+  for (const point of pts) {
+    if (!point) {
+      drawing = false
+      continue
+    }
+    path += `${drawing ? 'L' : 'M'}${point[0]},${point[1]} `
+    drawing = true
+  }
   const allPointsPresent = pts.every((point) => point != null)
   const fillPath = allPointsPresent
     ? `${path} L${pad.left + innerW},${pad.top + innerH} L${pad.left},${pad.top + innerH} Z`

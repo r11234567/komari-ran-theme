@@ -56,12 +56,6 @@ import { type Theme } from '@/components/atoms/ThemePicker'
 type Conn = 'connecting' | 'open' | 'closed' | 'error' | 'idle'
 
 type WindowKey = string
-interface WindowSpec {
-  key: WindowKey
-  label: string
-  hours: number
-  buckets: number
-}
 interface Props {
   uuid: string
   nodes: KomariNode[]
@@ -113,10 +107,9 @@ function deriveHeartbeat7d(pingHistory: PingHistory): HeartbeatCell[] {
   const start = now - windowMs
   const cellMs = windowMs / CELLS
 
-  const cells: HeartbeatCell[] = Array.from({ length: CELLS }, (_, i) => {
-    const cellStart = start + i * cellMs
-    const cellEnd = cellStart + cellMs
-    const date = new Date(cellStart)
+	const cells: HeartbeatCell[] = Array.from({ length: CELLS }, (_, i) => {
+		const cellStart = start + i * cellMs
+		const date = new Date(cellStart)
     const day = date.getMonth() + 1 + '/' + date.getDate()
     const hour = String(date.getHours()).padStart(2, '0')
     return { state: -1 as -1 | 0 | 1, label: `${day} ${hour}:00` }

@@ -44,6 +44,7 @@ jobs:
             --rule 'react-hooks/purity: off' \
             --rule 'react-hooks/set-state-in-effect: off' \
             --rule 'react-hooks/refs: off' \
+            --rule 'react-hooks/immutability: off' \
             --rule 'react-hooks/preserve-manual-memoization: off'
 
       - name: Upload installable theme

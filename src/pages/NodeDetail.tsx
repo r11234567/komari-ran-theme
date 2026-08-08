@@ -12,7 +12,6 @@ import { StatusDot } from '@/components/atoms/StatusDot'
 import { Tabs } from '@/components/atoms/Tabs'
 import { AreaChart } from '@/components/charts/AreaChart'
 import { DualSeriesChart } from '@/components/charts/DualSeriesChart'
-import { PingChart } from '@/components/charts/PingChart'
 import { RadialGauge } from '@/components/charts/RadialGauge'
 import type { KomariNode, KomariPublicConfig, KomariRecord } from '@/types/komari'
 import {
