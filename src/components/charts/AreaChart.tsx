@@ -9,7 +9,7 @@ import {
 } from './ChartTooltip'
 
 interface Props {
-  data: number[]
+  data: Array<number | null>
   /** Initial / fallback width — actual width adapts to parent via ResizeObserver. */
   width?: number
   height?: number
@@ -68,6 +68,7 @@ function AreaChart_({
       const localX = svgX - pad.left
       const idx = Math.max(0, Math.min(data.length - 1, Math.round(localX / stepX)))
       const v = data[idx]
+      if (v == null) return null
       const cx = pad.left + idx * stepX
       const cy =
         pad.top + innerH - ((Math.max(yMin, Math.min(yMax, v)) - yMin) / range) * innerH
@@ -93,7 +94,7 @@ function AreaChart_({
     resolve,
   })
 
-  if (data.length === 0) {
+  if (!data.some((value) => value != null)) {
     return (
       <div
         ref={wrapRef}
@@ -108,17 +109,39 @@ function AreaChart_({
     )
   }
 
-  const pts = data.map(
-    (d, i) =>
-      [
-        pad.left + i * stepX,
-        pad.top + innerH - ((Math.max(yMin, Math.min(yMax, d)) - yMin) / range) * innerH,
-      ] as [number, number],
+  const pts = data.map((value, index) =>
+    value == null
+      ? null
+      : ([
+          pad.left + index * stepX,
+          pad.top + innerH -
+            ((Math.max(yMin, Math.min(yMax, value)) - yMin) / range) * innerH,
+        ] as [number, number]),
   )
+  let drawing = false
   const path = pts
-    .map((p, i) => (i === 0 ? `M${p[0]},${p[1]}` : `L${p[0]},${p[1]}`))
+    .map((point) => {
+      if (!point) {
+        drawing = false
+        return ''
+      }
+      const command = `${drawing ? 'L' : 'M'}${point[0]},${point[1]}`
+      drawing = true
+      return command
+    })
     .join(' ')
-  const fillPath = `${path} L${pad.left + innerW},${pad.top + innerH} L${pad.left},${pad.top + innerH} Z`
+  const allPointsPresent = pts.every((point) => point != null)
+  const fillPath = allPointsPresent
+    ? `${path} L${pad.left + innerW},${pad.top + innerH} L${pad.left},${pad.top + innerH} Z`
+    : ''
+  let lastPoint: [number, number] | null = null
+  for (let index = pts.length - 1; index >= 0; index--) {
+    const point = pts[index]
+    if (point) {
+      lastPoint = point
+      break
+    }
+  }
 
   const formatLabel = formatY ?? ((v: number) => v.toFixed(0))
 
@@ -189,7 +212,7 @@ function AreaChart_({
             <stop offset="100%" stopColor={color} stopOpacity="0" />
           </linearGradient>
         </defs>
-        <path d={fillPath} fill={`url(#${id})`} />
+        {fillPath && <path d={fillPath} fill={`url(#${id})`} />}
         {/* line */}
         <path
           d={path}
@@ -199,12 +222,12 @@ function AreaChart_({
           strokeLinejoin="round"
         />
         {/* current dot */}
-        {pts.length > 0 && (
+        {lastPoint && (
           <>
-            <circle cx={pts[pts.length - 1][0]} cy={pts[pts.length - 1][1]} r="2.5" fill={color} />
+            <circle cx={lastPoint[0]} cy={lastPoint[1]} r="2.5" fill={color} />
             <circle
-              cx={pts[pts.length - 1][0]}
-              cy={pts[pts.length - 1][1]}
+              cx={lastPoint[0]}
+              cy={lastPoint[1]}
               r="5"
               fill={color}
               opacity="0.2"

@@ -3,7 +3,7 @@ import type { PingHistory, PingRecord, PingTask } from '@/api/client'
 export interface PingTargetSeries {
   task: PingTask
   /** Time bucket → average latency (ms) across all probing nodes */
-  data: number[]
+  data: Array<number | null>
   /** Most recent ms value (latest bucket with data) */
   latest?: number
 }
@@ -59,11 +59,12 @@ export function aggregatePingByTarget(
     const slot = byTask.get(task.id)
     if (!slot) continue
 
-    const data = slot.sum.map((s, i) => (slot.n[i] > 0 ? s / slot.n[i] : 0))
+    const data = slot.sum.map((s, i) => (slot.n[i] > 0 ? s / slot.n[i] : null))
     let latest: number | undefined
     for (let i = data.length - 1; i >= 0; i--) {
-      if (slot.n[i] > 0) {
-        latest = data[i]
+      const value = data[i]
+      if (value != null) {
+        latest = value
         break
       }
     }

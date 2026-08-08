@@ -9,7 +9,7 @@ import {
 } from './ChartTooltip'
 
 interface Series {
-  data: number[]
+  data: Array<number | null>
   label?: string
 }
 
@@ -57,14 +57,16 @@ function PingChart_({
 }: Props) {
   const [wrapRef, width] = useElementWidth<HTMLDivElement>(initialWidth)
 
-  const hasData = series.length > 0 && series[0].data.length > 0
+  const hasData = series.some((item) => item.data.some((value) => value != null))
 
   // Auto Y scale if not provided — find max across all series, round up to nice value
   const computedYMax =
     yMax ??
     (() => {
       let m = 0
-      for (const s of series) for (const v of s.data) if (v > m) m = v
+      for (const s of series) {
+        for (const v of s.data) if (v != null && v > m) m = v
+      }
       m = Math.max(50, m * 1.2)
       // round to nearest 25
       return Math.ceil(m / 25) * 25
@@ -76,7 +78,7 @@ function PingChart_({
   const pad = { top: 14, right: 44, bottom: 22, left: 8 }
   const innerW = width - pad.left - pad.right
   const innerH = height - pad.top - pad.bottom - legendH
-  const len = hasData ? series[0].data.length : 0
+  const len = hasData ? Math.max(...series.map((item) => item.data.length)) : 0
   const stepX = len > 1 ? innerW / (len - 1) : 0
 
   const resolve = useCallback(
@@ -91,7 +93,8 @@ function PingChart_({
       let bestY = pad.top + innerH
       let bestV = 0
       for (let si = 0; si < series.length; si++) {
-        const v = series[si].data[idx] ?? 0
+        const v = series[si].data[idx]
+        if (v == null) continue
         const y =
           pad.top + innerH - (Math.min(computedYMax, v) / computedYMax) * innerH
         const dy = Math.abs(svgY - y)
@@ -102,6 +105,7 @@ function PingChart_({
           bestV = v
         }
       }
+      if (!Number.isFinite(bestDy)) return null
       const label = series[bestSi].label
       const t = times?.[idx]
       return {
@@ -190,17 +194,24 @@ function PingChart_({
         {/* series */}
         {series.map((s, si) => {
           const c = COLORS[si % COLORS.length]
-          const pts = s.data.map(
-            (d, i) =>
-              [
-                pad.left + i * stepX,
-                pad.top + innerH - (Math.min(computedYMax, d) / computedYMax) * innerH,
-              ] as [number, number],
-          )
-          const path = pts
-            .map((p, i) => (i === 0 ? `M${p[0]},${p[1]}` : `L${p[0]},${p[1]}`))
-            .join(' ')
-          const last = pts[pts.length - 1]
+          let drawing = false
+          let path = ''
+          let last: [number, number] | null = null
+          for (let index = 0; index < s.data.length; index++) {
+            const value = s.data[index]
+            if (value == null) {
+              drawing = false
+              continue
+            }
+            const point: [number, number] = [
+              pad.left + index * stepX,
+              pad.top + innerH - (Math.min(computedYMax, value) / computedYMax) * innerH,
+            ]
+            path += `${drawing ? 'L' : 'M'}${point[0]},${point[1]} `
+            drawing = true
+            last = point
+          }
+          if (!last) return null
           return (
             <g key={`s${si}`}>
               <path

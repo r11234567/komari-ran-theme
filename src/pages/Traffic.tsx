@@ -15,7 +15,7 @@ import type { KomariNode, KomariPublicConfig, KomariRecord } from '@/types/komar
 import type { GlobalHistoryState } from '@/hooks/useGlobalHistory'
 import { useGlobalHistory } from '@/hooks/useGlobalHistory'
 import { formatBps, formatBytes } from '@/utils/format'
-import { filterWindowsByRetention, getRecordRetentionHours } from '@/utils/retention'
+import { buildHistoricalWindows, getRecordRetentionHours } from '@/utils/retention'
 import { contentFs } from '@/utils/fontScale'
 import { hashFor } from '@/router/route'
 import { useMobileDrawer } from '@/hooks/useMediaQuery'
@@ -23,7 +23,7 @@ import { type Theme } from '@/components/atoms/ThemePicker'
 
 type Conn = 'connecting' | 'open' | 'closed' | 'error' | 'idle'
 type SortBy = 'total' | 'tx' | 'rx' | 'live'
-type TimeKey = '1h' | '6h' | '24h' | '7d'
+type TimeKey = string
 
 interface TimeWindow {
   key: TimeKey
@@ -33,37 +33,6 @@ interface TimeWindow {
   /** Inline label spec for the bucket-axis below the area chart. */
   axisLabels: string[]
 }
-
-const TIME_WINDOWS: TimeWindow[] = [
-  {
-    key: '1h',
-    label: '1H',
-    hours: 1,
-    titleSuffix: '1H',
-    axisLabels: ['-60m', '-50m', '-40m', '-30m', '-20m', '-10m', 'now'],
-  },
-  {
-    key: '6h',
-    label: '6H',
-    hours: 6,
-    titleSuffix: '6H',
-    axisLabels: ['-6h', '-5h', '-4h', '-3h', '-2h', '-1h', 'now'],
-  },
-  {
-    key: '24h',
-    label: '24H',
-    hours: 24,
-    titleSuffix: '24H',
-    axisLabels: ['-24h', '-20h', '-16h', '-12h', '-8h', '-4h', 'now'],
-  },
-  {
-    key: '7d',
-    label: '7D',
-    hours: 168,
-    titleSuffix: '7D',
-    axisLabels: ['-7d', '-6d', '-5d', '-4d', '-3d', '-2d', '-1d'],
-  },
-]
 
 function bytesShort(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return '0'
@@ -121,15 +90,19 @@ export function TrafficPage({
   // Filter time windows by Komari's record retention (record_preserve_time, in hours).
   // If retention is e.g. 24h, the 7D option simply isn't offered.
   const retentionHours = getRecordRetentionHours(config)
-  const availableWindows = useMemo(
-    () => filterWindowsByRetention(TIME_WINDOWS, retentionHours),
+  const availableWindows = useMemo<TimeWindow[]>(
+    () =>
+      buildHistoricalWindows(retentionHours).map((window) => ({
+        ...window,
+        axisLabels: window.xLabels,
+      })),
     [retentionHours],
   )
   // Clamp the active key to whatever's available (handles config arriving late).
   const activeKey: TimeKey = availableWindows.some((w) => w.key === timeKey)
     ? timeKey
     : availableWindows[0].key
-  const win = TIME_WINDOWS.find((w) => w.key === activeKey) ?? TIME_WINDOWS[0]
+  const win = availableWindows.find((w) => w.key === activeKey) ?? availableWindows[0]
 
   // Pull our own windowed history (independent of the global 1H one).
   // For 1H we still use the prop-supplied global history (shared with Overview, no extra fetch).

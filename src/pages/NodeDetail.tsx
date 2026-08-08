@@ -26,10 +26,16 @@ import {
 import { bucketLoadHistory, hasLoadData } from '@/utils/load'
 import { aggregatePingByTarget, hasPingData } from '@/utils/ping'
 import type { PingTask } from '@/api/client'
-import { getRecordRetentionHours } from '@/utils/retention'
+import {
+  buildHistoricalWindows,
+  getPingRetentionHours,
+  getRecordRetentionHours,
+  type HistoryWindow,
+} from '@/utils/retention'
 import { contentFs } from '@/utils/fontScale'
 import { parseMetricsDisplay, resolveMetricsForm } from '@/utils/metricsDisplay'
 import { useNodeHistory } from '@/hooks/useNodeHistory'
+import { useLiveLoadHistory } from '@/hooks/useLiveLoadHistory'
 import { hashFor } from '@/router/route'
 import { useMobileDrawer, useIsMobile } from '@/hooks/useMediaQuery'
 import { type Theme } from '@/components/atoms/ThemePicker'
@@ -37,47 +43,18 @@ import { type Theme } from '@/components/atoms/ThemePicker'
 type Conn = 'connecting' | 'open' | 'closed' | 'error' | 'idle'
 type WindowKey = string
 
-interface WindowSpec {
-  key: WindowKey
-  label: string
-  hours: number
-  buckets: number
-  /** 7 X-axis tick labels for the chart, evenly spaced, oldest → newest. */
-  xLabels: string[]
-  /** Title suffix shown on the chart cards. */
-  titleSuffix: string
+interface WindowSpec extends HistoryWindow {
+  live?: boolean
 }
 
-function fWindowLabel(hours: number): string {
-  if (hours < 24) return `${hours}H`
-  const d = Math.round(hours / 24)
-  return `${d}D`
-}
-
-function fXLabels(hours: number): string[] {
-  return Array.from({ length: 7 }, (_, i) => {
-    if (i === 6) return 'now'
-    const remaining = hours * (1 - i / 6)
-    if (remaining < 24) return `-${Math.round(remaining)}h`
-    return `-${Math.round(remaining / 24)}d`
-  })
-}
-
-function buildWindows(retentionHours: number): WindowSpec[] {
-  const candidates = [1, 6, 24, 24 * 7, 24 * 30]
-  const ceil = Math.floor(retentionHours)
-  if (!candidates.includes(ceil) && ceil > 1) candidates.push(ceil)
-  candidates.sort((a, b) => a - b)
-  const filtered = candidates.filter((h) => h <= retentionHours)
-  if (filtered.length === 0) filtered.push(1)
-  return filtered.map((h) => ({
-    key: `${h}h`,
-    label: fWindowLabel(h),
-    hours: h,
-    buckets: Math.min(120, Math.max(60, Math.round(h * 2))),
-    xLabels: fXLabels(h),
-    titleSuffix: fWindowLabel(h),
-  }))
+const LIVE_WINDOW: WindowSpec = {
+  key: 'live',
+  label: 'LIVE',
+  hours: 1,
+  buckets: 120,
+  xLabels: ['-10m', '-8m', '-6m', '-5m', '-3m', '-1m', 'now'],
+  titleSuffix: 'LIVE · 10M',
+  live: true,
 }
 
 interface Props {
@@ -112,30 +89,37 @@ export function NodeDetailPage({
     isMobile,
   )
   // Hooks must be called before any early return.
-  const [windowKey, setWindowKey] = useState<WindowKey>('1h')
-
-  // Filter windows by Komari record retention (record_preserve_time, in hours).
-  const retentionHours = getRecordRetentionHours(config)
-  const availableWindows = useMemo(
-    () => buildWindows(retentionHours),
-    [retentionHours],
-  )
-  const activeWindowKey: WindowKey = availableWindows.some((w) => w.key === windowKey)
-    ? windowKey
-    : availableWindows[0].key
-  const windowSpec = availableWindows.find((w) => w.key === activeWindowKey) ?? availableWindows[0]
-  const history = useNodeHistory(uuid, windowSpec.hours)
   const [tab, setTab] = useState<'overview' | 'latency'>('overview')
+  const [loadWindowKey, setLoadWindowKey] = useState<WindowKey>('live')
+  const [pingWindowKey, setPingWindowKey] = useState<WindowKey>('1h')
+
+  const loadWindows = useMemo<WindowSpec[]>(
+    () => [LIVE_WINDOW, ...buildHistoricalWindows(getRecordRetentionHours(config))],
+    [config],
+  )
+  const pingWindows = useMemo<WindowSpec[]>(
+    () => buildHistoricalWindows(getPingRetentionHours(config)),
+    [config],
+  )
+  const availableWindows = tab === 'overview' ? loadWindows : pingWindows
+  const requestedWindowKey = tab === 'overview' ? loadWindowKey : pingWindowKey
+  const activeWindowKey = availableWindows.some((window) => window.key === requestedWindowKey)
+    ? requestedWindowKey
+    : availableWindows[0].key
+  const windowSpec = availableWindows.find((window) => window.key === activeWindowKey) ?? availableWindows[0]
+  const history = useNodeHistory(uuid, windowSpec.hours)
 
   const node = useMemo(() => nodes.find((n) => n.uuid === uuid), [nodes, uuid])
   const record = node ? records[node.uuid] : undefined
+  const liveLoad = useLiveLoadHistory(uuid, record, lastUpdate)
   const labels = node ? parseLabels(node.tags) : { raw: [] }
 
-  const windowMs = windowSpec.hours * 60 * 60 * 1000
+  const windowMs = windowSpec.live ? 10 * 60 * 1000 : windowSpec.hours * 60 * 60 * 1000
+  const loadHistory = windowSpec.live ? liveLoad : history.load
   // Bucketed real history (zero-filled when there's no data yet).
   const buckets = useMemo(
-    () => bucketLoadHistory(history.load, windowSpec.buckets, windowMs),
-    [history.load, windowSpec.buckets, windowMs],
+    () => bucketLoadHistory(loadHistory, windowSpec.buckets, windowMs),
+    [loadHistory, windowSpec.buckets, windowMs],
   )
   // Per-point timestamps for chart tooltips. Same scheme as bucketLoadHistory:
   // bucketMs * (i + 0.5) gives the slot midpoint.
@@ -269,7 +253,8 @@ export function NodeDetailPage({
 
   const subtitle = `${node.region ?? '—'} · ${node.ip ?? '—'} · UP ${online ? formatUptime(record?.uptime) : '—'}`
 
-  const haveLoadHistory = hasLoadData(history.load)
+  const haveLoadHistory = hasLoadData(loadHistory)
+  const loadIsLoading = windowSpec.live ? !lastUpdate : history.loading
   const cpuHist = buckets.cpu
   const memHist = buckets.ram
   const netUpHist = buckets.netOut
@@ -647,7 +632,10 @@ export function NodeDetailPage({
                 <Segmented
                   size="sm"
                   value={activeWindowKey}
-                  onChange={(v) => setWindowKey(v as WindowKey)}
+                  onChange={(value) => {
+                    if (tab === 'overview') setLoadWindowKey(value)
+                    else setPingWindowKey(value)
+                  }}
                   options={availableWindows.map((w) => ({ value: w.key, label: w.label }))}
                 />
               </div>
@@ -673,8 +661,8 @@ export function NodeDetailPage({
                   action={
                     <Etch>
                       {haveLoadHistory
-                        ? `${history.load.count} SAMPLES`
-                        : history.loading
+                        ? `${loadHistory.count} SAMPLES`
+                        : loadIsLoading
                           ? 'LOADING'
                           : 'NO DATA'}
                     </Etch>
@@ -1073,7 +1061,11 @@ function PingTargetCard({
   index,
   times,
 }: {
-  target: { task: { id: number; name: string; loss: number; interval: number }; data: number[]; latest?: number }
+  target: {
+    task: { id: number; name: string; loss: number; interval: number }
+    data: Array<number | null>
+    latest?: number
+  }
   index: number
   times?: number[]
 }) {
@@ -1083,7 +1075,7 @@ function PingTargetCard({
   const loss = target.task.loss ?? 0
 
   // Auto y-scale based on this target's actual values
-  const peak = Math.max(...target.data, 1)
+  const peak = Math.max(...target.data.filter((value): value is number => value != null), 1)
   const yMax = Math.ceil((peak * 1.3) / 10) * 10 || 50
 
   // Status from loss + latency
@@ -1206,4 +1198,3 @@ function ConnRow({ label, value }: { label: string; value: string | number }) {
     </div>
   )
 }
-

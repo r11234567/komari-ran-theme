@@ -1,0 +1,40 @@
+name: Build Ran LTS Theme
+
+on:
+  push:
+    branches:
+      - theme/ran-lts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout theme source
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint source
+        run: npm run lint
+
+      - name: Build theme
+        run: npm run build
+
+      - name: Upload installable theme
+        uses: actions/upload-artifact@v5
+        with:
+          name: ran-lts-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30

@@ -35,7 +35,9 @@ export function useNodeHistory(uuid: string, hours = 1, refreshMs = 60_000): Nod
       const [load, ping] = await Promise.all([
         fetchNodeLoadHistory(uuid, hours),
         // Metric store (1.2.6+) honours `hours`; legacy fallback inside.
-        fetchNodePing(uuid, hours),
+        // The LTS bridge treats maxPoints as a response-wide budget. 3000
+        // keeps roughly 60 aligned latency/loss points for 22 Ping tasks.
+        fetchNodePing(uuid, hours, 3000),
       ])
       if (cancelled) return
       setState({ load, ping, loading: false })

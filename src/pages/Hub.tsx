@@ -39,7 +39,11 @@ import {
 import { bucketLoadHistory } from '@/utils/load'
 import { aggregatePingByTarget, hasPingData } from '@/utils/ping'
 import { contentFs } from '@/utils/fontScale'
-import { filterWindowsByRetention, getRecordRetentionHours } from '@/utils/retention'
+import {
+  buildHistoricalWindows,
+  getPingRetentionHours,
+  getRecordRetentionHours,
+} from '@/utils/retention'
 import { useNodeHistory } from '@/hooks/useNodeHistory'
 import { useNodeTelemetry } from '@/hooks/useNodeTelemetry'
 import { NetworkQualityPanel } from '@/components/v2/NetworkQualityPanel'
@@ -51,20 +55,13 @@ import { type Theme } from '@/components/atoms/ThemePicker'
 
 type Conn = 'connecting' | 'open' | 'closed' | 'error' | 'idle'
 
-type WindowKey = '1h' | '6h' | '24h' | '7d'
+type WindowKey = string
 interface WindowSpec {
   key: WindowKey
   label: string
   hours: number
   buckets: number
 }
-const WINDOWS: WindowSpec[] = [
-  { key: '1h', label: '1H', hours: 1, buckets: 60 },
-  { key: '6h', label: '6H', hours: 6, buckets: 72 },
-  { key: '24h', label: '24H', hours: 24, buckets: 96 },
-  { key: '7d', label: '7D', hours: 24 * 7, buckets: 84 },
-]
-
 interface Props {
   uuid: string
   nodes: KomariNode[]
@@ -850,19 +847,21 @@ export function HubPage({
     return () => window.clearInterval(id)
   }, [])
 
-  // Per-node history for the four charts — selectable time window. Mirrors
-  // the WINDOWS spec used on NodeDetail so the same retention-aware
-  // filtering applies here too.
+  // Per-node history for the four charts uses the shared retention-aware
+  // windows. This mixed load/latency view intentionally has no LIVE option.
   const [windowKey, setWindowKey] = useState<WindowKey>('1h')
-  const retentionHours = getRecordRetentionHours(config)
+  const retentionHours = Math.min(
+    getRecordRetentionHours(config),
+    getPingRetentionHours(config),
+  )
   const availableWindows = useMemo(
-    () => filterWindowsByRetention(WINDOWS, retentionHours),
+    () => buildHistoricalWindows(retentionHours),
     [retentionHours],
   )
   const activeWindowKey: WindowKey = availableWindows.some((w) => w.key === windowKey)
     ? windowKey
     : availableWindows[0].key
-  const windowSpec = WINDOWS.find((w) => w.key === activeWindowKey) ?? WINDOWS[0]
+  const windowSpec = availableWindows.find((w) => w.key === activeWindowKey) ?? availableWindows[0]
   const HOURS = windowSpec.hours
   const BUCKETS = windowSpec.buckets
 
@@ -1475,7 +1474,12 @@ export function HubPage({
                 >
                   <div style={{ padding: '8px 12px 12px' }}>
                     {pingSeries.length > 0 ? (
-                      <PingChart series={pingSeries} height={120} times={bucketTimes} />
+                      <PingChart
+                        series={pingSeries}
+                        height={120}
+                        times={bucketTimes}
+                        xLabels={windowSpec.xLabels}
+                      />
                     ) : (
                       <div
                         style={{
