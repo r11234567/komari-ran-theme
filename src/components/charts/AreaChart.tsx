@@ -30,6 +30,10 @@ interface Props {
   formatValue?: (v: number) => string
 }
 
+function isFinitePoint(value: number | null): value is number {
+  return value != null && Number.isFinite(value)
+}
+
 /**
  * AreaChart — full chart with grid, y-axis labels on the right,
  * area fill gradient, current-value dot, optional threshold dashed line,
@@ -66,7 +70,7 @@ function AreaChart_({
       const localX = svgX - pad.left
       const idx = Math.max(0, Math.min(data.length - 1, Math.round(localX / stepX)))
       const v = data[idx]
-      if (v == null) return null
+      if (!isFinitePoint(v)) return null
       const cx = pad.left + idx * stepX
       const cy =
         pad.top + innerH - ((Math.max(yMin, Math.min(yMax, v)) - yMin) / range) * innerH
@@ -92,7 +96,7 @@ function AreaChart_({
     resolve,
   })
 
-  if (!data.some((value) => value != null)) {
+  if (!data.some(isFinitePoint)) {
     return (
       <div
         ref={wrapRef}
@@ -108,7 +112,7 @@ function AreaChart_({
   }
 
   const pts = data.map((value, index) =>
-    value == null
+    !isFinitePoint(value)
       ? null
       : ([
           pad.left + index * stepX,
@@ -130,6 +134,10 @@ function AreaChart_({
   const fillPath = allPointsPresent
     ? `${path} L${pad.left + innerW},${pad.top + innerH} L${pad.left},${pad.top + innerH} Z`
     : ''
+  const isolatedPoints = pts.filter(
+    (point, index): point is [number, number] =>
+      point != null && pts[index - 1] == null && pts[index + 1] == null,
+  )
   let lastPoint: [number, number] | null = null
   for (let index = pts.length - 1; index >= 0; index--) {
     const point = pts[index]
@@ -217,6 +225,19 @@ function AreaChart_({
           fill="none"
           strokeLinejoin="round"
         />
+        {/* A move-only SVG subpath is invisible. Long downsampled windows can
+            leave valid samples isolated between empty buckets, so render only
+            those points explicitly without connecting across real gaps. */}
+        {isolatedPoints.map((point, index) => (
+          <circle
+            key={`isolated-${index}`}
+            cx={point[0]}
+            cy={point[1]}
+            r={1.8}
+            fill={color}
+            opacity={0.9}
+          />
+        ))}
         {/* current dot */}
         {lastPoint && (
           <>

@@ -26,6 +26,10 @@ interface Props {
   xLabels?: string[]
 }
 
+function isFinitePoint(value: number | null): value is number {
+  return value != null && Number.isFinite(value)
+}
+
 const COLORS = [
   'var(--accent-bright)',
   'var(--signal-info)',
@@ -57,7 +61,7 @@ function PingChart_({
 }: Props) {
   const [wrapRef, width] = useElementWidth<HTMLDivElement>(initialWidth)
 
-  const hasData = series.some((item) => item.data.some((value) => value != null))
+  const hasData = series.some((item) => item.data.some(isFinitePoint))
 
   // Auto Y scale if not provided — find max across all series, round up to nice value
   const computedYMax =
@@ -65,7 +69,7 @@ function PingChart_({
     (() => {
       let m = 0
       for (const s of series) {
-        for (const v of s.data) if (v != null && v > m) m = v
+        for (const v of s.data) if (isFinitePoint(v) && v > m) m = v
       }
       m = Math.max(50, m * 1.2)
       // round to nearest 25
@@ -94,7 +98,7 @@ function PingChart_({
       let bestV = 0
       for (let si = 0; si < series.length; si++) {
         const v = series[si].data[idx]
-        if (v == null) continue
+        if (!isFinitePoint(v)) continue
         const y =
           pad.top + innerH - (Math.min(computedYMax, v) / computedYMax) * innerH
         const dy = Math.abs(svgY - y)
@@ -194,24 +198,33 @@ function PingChart_({
         {/* series */}
         {series.map((s, si) => {
           const c = COLORS[si % COLORS.length]
+          const points = s.data.map((value, index) =>
+            isFinitePoint(value)
+              ? ([
+                  pad.left + index * stepX,
+                  pad.top +
+                    innerH -
+                    (Math.min(computedYMax, value) / computedYMax) * innerH,
+                ] as [number, number])
+              : null,
+          )
           let drawing = false
           let path = ''
           let last: [number, number] | null = null
-          for (let index = 0; index < s.data.length; index++) {
-            const value = s.data[index]
-            if (value == null) {
+          for (const point of points) {
+            if (!point) {
               drawing = false
               continue
             }
-            const point: [number, number] = [
-              pad.left + index * stepX,
-              pad.top + innerH - (Math.min(computedYMax, value) / computedYMax) * innerH,
-            ]
             path += `${drawing ? 'L' : 'M'}${point[0]},${point[1]} `
             drawing = true
             last = point
           }
           if (!last) return null
+          const isolatedPoints = points.filter(
+            (point, index): point is [number, number] =>
+              point != null && points[index - 1] == null && points[index + 1] == null,
+          )
           return (
             <g key={`s${si}`}>
               <path
@@ -222,6 +235,16 @@ function PingChart_({
                 strokeLinejoin="round"
                 opacity={0.85}
               />
+              {isolatedPoints.map((point, index) => (
+                <circle
+                  key={`isolated-${index}`}
+                  cx={point[0]}
+                  cy={point[1]}
+                  r={1.7}
+                  fill={c}
+                  opacity={0.9}
+                />
+              ))}
               <circle cx={last[0]} cy={last[1]} r={2} fill={c} />
             </g>
           )

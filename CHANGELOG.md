@@ -2,6 +2,13 @@
 
 > Notable changes to 岚 (Ran) — Komari probe theme.
 
+## v2.1.2-lts.3 — 2026-08-08
+
+### Fixed
+
+- Render isolated latency samples in long downsampled windows. Sparse points remain separated across real data gaps but are no longer invisible move-only SVG paths.
+- Treat non-finite chart values as empty buckets so one invalid sample cannot invalidate an entire SVG path.
+
 ## v2.1.2-lts.2 — 2026-08-08
 
 ### Komari 1.2.5-LTS compatibility
