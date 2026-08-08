@@ -1,4 +1,9 @@
 import type { KomariMe, KomariNode, KomariPublicConfig, KomariWSPayload } from '@/types/komari'
+import {
+  fetchBoundedLoadHistory,
+  fetchBoundedPingHistory,
+  historyMaxPoints,
+} from '@/api/ltsHistory'
 
 /**
  * Resolve API base — defaults to current origin (theme served by Komari).
@@ -107,8 +112,14 @@ export async function fetchPingHistory(hours = 1): Promise<PingHistory> {
 /** Per-node ping history — pings for one specific probe over `hours`. */
 export async function fetchNodePingHistory(uuid: string, hours = 1): Promise<PingHistory> {
   try {
+    const bounded = await fetchBoundedPingHistory(uuid, hours, apiBase())
+    if (bounded) return bounded
+  } catch {
+    // Older Komari versions do not expose the bounded history endpoint.
+  }
+  try {
     return await getJson<PingHistory>(
-      `/api/records/ping?uuid=${encodeURIComponent(uuid)}&hours=${hours}`,
+      `/api/records/ping?uuid=${encodeURIComponent(uuid)}&hours=${hours}&max_points=${historyMaxPoints(hours)}`,
     )
   } catch {
     return { count: 0, tasks: [], records: [] }
@@ -144,8 +155,14 @@ export interface LoadHistory {
 
 export async function fetchNodeLoadHistory(uuid: string, hours = 1): Promise<LoadHistory> {
   try {
+    const bounded = await fetchBoundedLoadHistory(uuid, hours, apiBase())
+    if (bounded) return bounded
+  } catch {
+    // Keep the theme usable on older servers and on transient query failures.
+  }
+  try {
     return await getJson<LoadHistory>(
-      `/api/records/load?uuid=${encodeURIComponent(uuid)}&hours=${hours}`,
+      `/api/records/load?uuid=${encodeURIComponent(uuid)}&hours=${hours}&max_points=${historyMaxPoints(hours)}`,
     )
   } catch {
     return { count: 0, records: [] }

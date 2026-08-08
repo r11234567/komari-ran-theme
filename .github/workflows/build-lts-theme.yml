@@ -31,6 +31,10 @@ jobs:
       - name: Lint LTS adaptation
         run: |
           npx eslint \
+            src/api/client.ts \
+            src/api/ltsHistory.ts \
+            src/api/ping.ts \
+            src/api/rpc2.ts \
             src/components/atoms/Segmented.tsx \
             src/components/charts/AreaChart.tsx \
             src/components/charts/PingChart.tsx \
@@ -53,10 +57,15 @@ jobs:
           set -euo pipefail
           version="$(node -p "JSON.parse(require('fs').readFileSync('komari-theme.json', 'utf8')).version")"
           archive="ran-lts-v${version}.zip"
-          cp komari-theme.json preview.png dist/
-          test -f dist/komari-theme.json
+          test -f komari-theme.json
+          test -f preview.png
           test -f dist/index.html
-          (cd dist && zip -qr "../${archive}" .)
+          test -f dist/map.html
+          zip -qr "${archive}" komari-theme.json preview.png dist/
+          unzip -Z1 "${archive}" | grep -qx 'komari-theme.json'
+          unzip -Z1 "${archive}" | grep -qx 'preview.png'
+          unzip -Z1 "${archive}" | grep -qx 'dist/index.html'
+          unzip -Z1 "${archive}" | grep -qx 'dist/map.html'
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "archive=${archive}" >> "$GITHUB_OUTPUT"
 
@@ -80,4 +89,4 @@ jobs:
           gh release create "$tag" "$ARCHIVE" \
             --target "$GITHUB_SHA" \
             --title "Ran ${VERSION}" \
-            --notes "Komari 1.2.5-LTS adapted Ran theme. Includes load and ping history windows, live load monitoring, and the installable theme manifest at the ZIP root."
+            --notes "Komari 1.2.5-LTS adapted Ran theme. Includes bounded Load/Ping compatibility, LTS history windows, live load monitoring, and the standard Komari package layout: manifest and preview at the ZIP root with theme files under dist/."

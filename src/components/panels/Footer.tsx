@@ -14,7 +14,7 @@ import type { KomariPublicConfig } from '@/types/komari'
  *     to make redistribution easy.
  */
 
-const REPO_URL = 'https://github.com/saladinxp/komari-ran-theme'
+const REPO_URL = 'https://github.com/r11234567/komari-ran-theme'
 
 const linkStyle: React.CSSProperties = {
   color: 'inherit',
@@ -57,7 +57,7 @@ function BeianEntry({ text, url }: { text: string; url: string }) {
   return <span>{text}</span>
 }
 
-export function Footer({ version = 'v2.1.2', config }: FooterProps) {
+export function Footer({ version = 'v2.1.2-lts.2', config }: FooterProps) {
   const ts = config?.theme_settings
   const icpText = readStr(ts, 'icp_text')
   const icpUrl = readStr(ts, 'icp_url')
