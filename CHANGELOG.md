@@ -2,6 +2,12 @@
 
 > Notable changes to 岚 (Ran) — Komari probe theme.
 
+## v2.1.2-lts.4 — 2026-08-08
+
+### Fixed
+
+- Connect valid long-window downsampled samples in timestamp order so latency and load curves remain visible instead of becoming isolated hover-only points.
+
 ## v2.1.2-lts.3 — 2026-08-08
 
 ### Fixed

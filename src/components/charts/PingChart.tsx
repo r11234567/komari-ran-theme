@@ -212,19 +212,12 @@ function PingChart_({
           let path = ''
           let last: [number, number] | null = null
           for (const point of points) {
-            if (!point) {
-              drawing = false
-              continue
-            }
+            if (!point) continue
             path += `${drawing ? 'L' : 'M'}${point[0]},${point[1]} `
             drawing = true
             last = point
           }
           if (!last) return null
-          const isolatedPoints = points.filter(
-            (point, index): point is [number, number] =>
-              point != null && points[index - 1] == null && points[index + 1] == null,
-          )
           return (
             <g key={`s${si}`}>
               <path
@@ -235,16 +228,6 @@ function PingChart_({
                 strokeLinejoin="round"
                 opacity={0.85}
               />
-              {isolatedPoints.map((point, index) => (
-                <circle
-                  key={`isolated-${index}`}
-                  cx={point[0]}
-                  cy={point[1]}
-                  r={1.7}
-                  fill={c}
-                  opacity={0.9}
-                />
-              ))}
               <circle cx={last[0]} cy={last[1]} r={2} fill={c} />
             </g>
           )

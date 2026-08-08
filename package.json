@@ -1,7 +1,7 @@
 {
   "name": "komari-ran-theme",
   "private": true,
-  "version": "2.1.2-lts.3",
+  "version": "2.1.2-lts.4",
   "type": "module",
   "scripts": {
     "dev": "vite",

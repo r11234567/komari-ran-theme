@@ -53,7 +53,7 @@ interface Props {
 
 export function Sidebar({
   active,
-  version = 'v2.1.2-lts.3',
+  version = 'v2.1.2-lts.4',
   hubTargetUuid,
   crossPage = false,
   mobileOpen = false,

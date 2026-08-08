@@ -123,10 +123,7 @@ function AreaChart_({
   let drawing = false
   let path = ''
   for (const point of pts) {
-    if (!point) {
-      drawing = false
-      continue
-    }
+    if (!point) continue
     path += `${drawing ? 'L' : 'M'}${point[0]},${point[1]} `
     drawing = true
   }
@@ -134,10 +131,6 @@ function AreaChart_({
   const fillPath = allPointsPresent
     ? `${path} L${pad.left + innerW},${pad.top + innerH} L${pad.left},${pad.top + innerH} Z`
     : ''
-  const isolatedPoints = pts.filter(
-    (point, index): point is [number, number] =>
-      point != null && pts[index - 1] == null && pts[index + 1] == null,
-  )
   let lastPoint: [number, number] | null = null
   for (let index = pts.length - 1; index >= 0; index--) {
     const point = pts[index]
@@ -225,19 +218,6 @@ function AreaChart_({
           fill="none"
           strokeLinejoin="round"
         />
-        {/* A move-only SVG subpath is invisible. Long downsampled windows can
-            leave valid samples isolated between empty buckets, so render only
-            those points explicitly without connecting across real gaps. */}
-        {isolatedPoints.map((point, index) => (
-          <circle
-            key={`isolated-${index}`}
-            cx={point[0]}
-            cy={point[1]}
-            r={1.8}
-            fill={color}
-            opacity={0.9}
-          />
-        ))}
         {/* current dot */}
         {lastPoint && (
           <>
