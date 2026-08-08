@@ -34,17 +34,6 @@ interface TimeWindow {
   axisLabels: string[]
 }
 
-function bytesShort(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return '0'
-  const units = ['B', 'K', 'M', 'G', 'T']
-  const idx = Math.min(
-    Math.floor(Math.log(Math.abs(bytes)) / Math.log(1024)),
-    units.length - 1,
-  )
-  const v = bytes / Math.pow(1024, idx)
-  return `${v.toFixed(idx === 0 ? 0 : 1)}${units[idx]}`
-}
-
 interface Props {
   nodes: KomariNode[]
   records: Record<string, KomariRecord>
