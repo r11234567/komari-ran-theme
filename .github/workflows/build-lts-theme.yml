@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   verify-and-build:
@@ -47,10 +47,37 @@ jobs:
             --rule 'react-hooks/immutability: off' \
             --rule 'react-hooks/preserve-manual-memoization: off'
 
+      - name: Prepare installable theme
+        id: package
+        run: |
+          set -euo pipefail
+          version="$(node -p "JSON.parse(require('fs').readFileSync('komari-theme.json', 'utf8')).version")"
+          archive="ran-lts-v${version}.zip"
+          cp komari-theme.json preview.png dist/
+          test -f dist/komari-theme.json
+          test -f dist/index.html
+          (cd dist && zip -qr "../${archive}" .)
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "archive=${archive}" >> "$GITHUB_OUTPUT"
+
       - name: Upload installable theme
         uses: actions/upload-artifact@v5
         with:
           name: ran-lts-${{ github.sha }}
-          path: dist/
+          path: ${{ steps.package.outputs.archive }}
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish Ran LTS release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARCHIVE: ${{ steps.package.outputs.archive }}
+          VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          set -euo pipefail
+          tag="v${VERSION}"
+          gh release create "$tag" "$ARCHIVE" \
+            --target "$GITHUB_SHA" \
+            --title "Ran ${VERSION}" \
+            --notes "Komari 1.2.5-LTS adapted Ran theme. Includes load and ping history windows, live load monitoring, and the installable theme manifest at the ZIP root."
