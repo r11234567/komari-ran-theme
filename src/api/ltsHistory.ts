@@ -86,8 +86,11 @@ async function queryHistory(
     })
     if (UNAVAILABLE_STATUSES.has(response.status)) return null
     if (!response.ok) throw new Error(`${HISTORY_ENDPOINT}: HTTP ${response.status}`)
-    const payload = (await response.json()) as HistoryResponse | { data?: HistoryResponse }
-    const result = 'data' in payload ? payload.data : payload
+    const payload = (await response.json()) as unknown
+    const result =
+      payload && typeof payload === 'object' && 'data' in payload
+        ? (payload as { data?: HistoryResponse }).data
+        : (payload as HistoryResponse)
     return result && Array.isArray(result.series) ? result : null
   } finally {
     window.clearTimeout(timeout)
