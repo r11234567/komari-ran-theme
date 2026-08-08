@@ -166,7 +166,7 @@ export async function fetchBoundedPingHistory(
     const payload = await getJson<PublicPingTask[]>(`${base}/api/task/ping`, controller.signal)
     definitions = Array.isArray(payload) ? payload : []
   } catch {
-    definitions = []
+    // Keep summaries usable when task metadata is unavailable.
   } finally {
     window.clearTimeout(timeout)
   }
