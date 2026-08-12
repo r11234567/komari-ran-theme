@@ -15,7 +15,7 @@ const options = (signal?: AbortSignal, timeoutMs = 30_000) => ({ signal, timeout
 const toLegacySeries = (series: Awaited<ReturnType<typeof metrics.queryMetrics>>['series'][number]): MetricSeries => ({
   metric_key: series.metric, entity_id: series.agentId, tags: series.labels,
   interval_seconds: series.interval ? Number(series.interval.seconds) : undefined,
-  points: series.queryPoints.map((point) => ({ time: point.observedAt ? timestampDate(point.observedAt).toISOString() : '', value: point.value })),
+  points: series.queryPoints.map((point) => ({ time: point.observedAt ? timestampDate(point.observedAt).toISOString() : '', value: point.value ?? null })),
 })
 
 export async function queryMetrics(input: { metricKeys: string[]; entityId?: string; entityIds?: string[]; hours?: number; start?: string; maxPoints?: number; downsample?: boolean; signal?: AbortSignal }): Promise<MetricSeries[]> {

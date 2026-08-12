@@ -1,8 +1,6 @@
 import { createClient } from '@connectrpc/connect'
-import { toJson } from '@bufbuild/protobuf'
 import { createConnectTransport } from '@connectrpc/connect-web'
 import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt'
-import { StructSchema } from '@bufbuild/protobuf/wkt'
 import { BrowserService } from '@komari/proto/komari/browser/v1/browser_pb'
 import { MetricsService } from '@komari/proto/komari/metrics/v1/metrics_pb'
 import type { AgentReport } from '@komari/proto/komari/report/v1/report_pb'
@@ -79,9 +77,7 @@ export async function fetchNodes(signal?: AbortSignal): Promise<KomariNode[]> {
 
 export async function fetchPublic(signal?: AbortSignal): Promise<KomariPublicConfig> {
   const info = await browser.getPublicInfo({}, signalOptions(signal))
-  const themeSettings = info.themeSettings
-    ? toJson(StructSchema, info.themeSettings) as Record<string, unknown>
-    : {}
+  const themeSettings = info.themeSettings ?? {}
   return { sitename: info.siteName, description: info.siteDescription, record_preserve_time: info.metricRetentionDays * 24, theme: info.defaultTheme, theme_settings: themeSettings, custom_head: info.customHead, custom_body: info.customBody }
 }
 
