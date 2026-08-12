@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { CardFrame } from '@/components/panels/CardFrame'
-import type { PingQualityStat } from '@/api/rpc2'
+import type { PingQualityStat } from '@/api/metrics'
 import { contentFs } from '@/utils/fontScale'
 
 /**

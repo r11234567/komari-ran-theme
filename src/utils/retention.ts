@@ -8,7 +8,7 @@ interface HasHours {
   hours: number
 }
 
-/** Default retention assumption when /api/public doesn't expose one (24h). */
+/** Default retention assumption when BrowserService does not expose one (24h). */
 const DEFAULT_RETENTION_HOURS = 24
 
 /** Read the metric retention window (in hours) from the public config. */

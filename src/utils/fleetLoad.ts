@@ -1,4 +1,4 @@
-import type { MetricSeries } from '@/api/rpc2'
+import type { MetricSeries } from '@/api/metrics'
 import type { LoadSeries } from '@/utils/load'
 
 /**
@@ -12,10 +12,7 @@ import type { LoadSeries } from '@/utils/load'
  *
  * Values, per the metric definitions:
  *   cpu.usage      percent
- *   memory.used/total, disk.used/total   bytes  → converted to percent here,
- *                                                 since that is what the charts
- *                                                 plot (and what the legacy
- *                                                 records/load path produced)
+ *   memory.used/total, disk.used/total   bytes converted to percent here
  *   net.in.rate / net.out.rate           bytes/sec
  *   load.average                         float
  */
@@ -66,12 +63,11 @@ export function pivotFleetLoad(series: MetricSeries[], buckets: number): Record<
     const diskUsed = get('disk.used', uuid)
     const diskTotal = get('disk.total', uuid)
 
-    // bytes → percent, guarding division by a zero/absent total.
     const pct = (used?: number[], total?: number[]): number[] => {
       if (!used || !total) return empty()
-      return used.map((u, i) => {
-        const t = total[i]
-        return t > 0 ? Math.min(100, (u / t) * 100) : 0
+      return used.map((value, index) => {
+        const maximum = total[index]
+        return maximum > 0 ? Math.min(100, (value / maximum) * 100) : 0
       })
     }
 

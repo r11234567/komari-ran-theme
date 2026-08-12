@@ -1,16 +1,12 @@
 /**
  * Komari Probe API types (real shape, observed from live panel).
  *
- * Two record shapes coexist:
- *  - Nested (raw, from /api/clients WS): cpu.usage, ram.used, network.up...
- *  - Flat (after normalization): cpu, memory_used, network_tx...
- *
- * We always normalize to flat shape for components.
+ * Theme view models derived from typed Connect browser and metrics messages.
  */
 
 export type NodeStatus = 'good' | 'warn' | 'bad'
 
-/** /api/nodes — node metadata */
+/** BrowserService node metadata */
 export interface KomariNode {
   uuid: string
   name?: string
@@ -57,23 +53,6 @@ export interface KomariNode {
   flag?: string
 }
 
-/** Raw nested record from Komari WebSocket /api/clients */
-export interface KomariRecordRaw {
-  cpu?: { usage?: number }
-  ram?: { used?: number; total?: number }
-  swap?: { used?: number; total?: number }
-  disk?: { used?: number; total?: number }
-  network?: { up?: number; down?: number; totalUp?: number; totalDown?: number }
-  connections?: { tcp?: number; udp?: number }
-  load?: { load1?: number; load5?: number; load15?: number }
-  uptime?: number
-  process?: number
-  os?: string
-  cpu_model?: string
-  message?: string
-  updated_at?: string
-}
-
 /** Normalized flat record — what components consume */
 export interface KomariRecord {
   uuid: string
@@ -103,13 +82,13 @@ export interface KomariRecord {
   cpu_model?: string
   message?: string
   updated_at?: string
-  /** Recent ping ms (from /api/records/ping) */
+  /** Recent typed Ping latency in milliseconds */
   ping?: number
   /** Packet loss percent */
   loss?: number
 }
 
-/** /api/public — site config */
+/** BrowserService public site config */
 export interface KomariPublicConfig {
   site_name?: string
   sitename?: string
@@ -131,10 +110,4 @@ export interface KomariPublicConfig {
 export interface KomariMe {
   logged_in?: boolean
   username?: string
-}
-
-/** Envelope from WS /api/clients */
-export interface KomariWSPayload {
-  online?: string[]
-  data?: Record<string, KomariRecordRaw | KomariRecord>
 }

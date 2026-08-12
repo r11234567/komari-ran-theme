@@ -14,7 +14,7 @@ interface Props {
   netSpark?: number[]
   pingSpark?: number[]
   pingLoss?: number[]
-  /** Derived ping summary from history (Komari WS frame doesn't carry ping/loss). */
+  /** Derived Ping summary from the typed metrics query. */
   pingStats?: { avg?: number; loss: number; taskName?: string }
 }
 

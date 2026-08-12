@@ -3,7 +3,7 @@
 > 精密金工质感的 Komari 探针面板主题
 > Precision-machined hi-fi gear, rendered as a server monitoring panel.
 
-[![version](https://img.shields.io/badge/version-2.1.2-c8a86c?style=flat-square)](https://github.com/saladinxp/komari-ran-theme/releases)
+[![version](https://img.shields.io/badge/version-2.1.3--connect.1-c8a86c?style=flat-square)](https://github.com/r11234567/komari-ran-theme/releases)
 [![demo](https://img.shields.io/badge/demo-obsr.net-2d6a4f?style=flat-square)](https://obsr.net)
 [![license](https://img.shields.io/badge/license-MIT-666?style=flat-square)](#许可)
 
@@ -117,7 +117,7 @@ Komari 后台 → 主题管理 → 岚 → 配置面板,支持以下后台开关
 |---|---|---|---|
 | `default_theme` | `ran-night` / `ran-mist` | `ran-night` | 首次加载默认主题,墨石(深) / 雾色(浅);用户切换后浏览器记忆偏好 |
 | `font_scale` | `standard` / `large` / `xlarge` | `standard` | 字体大小三档,内容字按 1× / 1.18× / 1.36× 缩放;装饰字与布局尺寸不变 |
-| `version_tag` | string | `v2.1.2` | 页脚显示的版本标识 |
+| `version_tag` | string | `v2.1.3-connect.1` | 页脚显示的版本标识 |
 
 ### ◇ HUD // 浮卡 + 流量
 
@@ -130,7 +130,7 @@ Komari 后台 → 主题管理 → 岚 → 配置面板,支持以下后台开关
 
 | 配置项 | 类型 | 默认 | 说明 |
 |---|---|---|---|
-| `site_name` | string | `岚 · Komari` | Topbar 显示的站点名,留空则使用 Komari `/api/public` 的 `site_name` |
+| `site_name` | string | `岚 · Komari` | Topbar 显示的站点名,留空则使用 BrowserService 返回的站点名 |
 | `footer_text` | string | `POWERED BY KOMARI` | 页脚右侧文字 |
 
 ### ◇ BEIAN // 备案
@@ -144,13 +144,12 @@ Komari 后台 → 主题管理 → 岚 → 配置面板,支持以下后台开关
 
 ## 数据接入
 
-主题部署后默认连同源的 Komari API:
+主题部署后通过同源 Connect-RPC 读取 Komari 数据:
 
-- `GET /api/nodes` — 节点列表
-- `GET /api/public` — 站点配置(站点名、retention 等)
-- `GET /api/records/load?uuid=X&hours=N` — 单节点负载历史
-- `GET /api/records/ping?uuid=X&hours=N` — 单节点 ping 历史
-- `WebSocket /api/clients` — 实时数据,1s 间隔轮询(请求-响应模式),自动重连
+- `BrowserService` — 节点列表、站点配置和可取消的实时状态流
+- `MetricsService` — 有界负载/Ping 历史、指标定义、Ping 任务和统计
+
+主题不调用 JSON-RPC、REST 或 WebSocket 兼容接口。需要 Komari Connect 主题 API（`komari-proto v0.1.9` 或更新版本）。
 
 API 不可达时(如本地 `npm run dev` 单独跑),会自动切到 mock 数据预览。
 

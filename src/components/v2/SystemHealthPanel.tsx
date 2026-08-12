@@ -6,7 +6,7 @@
  * service-level introspection, this panel surfaces what the front-end CAN
  * observe:
  *
- *   • WebSocket Stream   — alive if conn === 'open' and lastUpdate < 30s
+ *   • Connect Stream     — alive if conn === 'open' and lastUpdate < 30s
  *   • Live Probe Feed    — alive if records map is populated
  *   • Ping History       — alive if ping data has recent records
  *   • Theme Engine       — always healthy (front-end runtime)
@@ -119,7 +119,7 @@ export function SystemHealthPanel({
   const storageDetail = storageOk ? 'r/w' : 'blocked'
 
   const rows: ServiceRow[] = [
-    { name: 'WebSocket Stream', health: wsHealth, detail: wsDetail },
+    { name: 'Connect Stream', health: wsHealth, detail: wsDetail },
     { name: 'Live Probe Feed', health: recordsHealth, detail: recordsDetail },
     { name: 'Ping History', health: pingHealth, detail: pingDetail },
     { name: 'Theme Engine', health: 'healthy', detail: 'runtime' },

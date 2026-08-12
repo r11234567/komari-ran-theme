@@ -167,7 +167,7 @@ export function NodeDetailPage({
   }, [nodes, records])
 
   // Distinguish "still loading the node roster" from "uuid genuinely not found".
-  // On a hard refresh of #/nodes/UUID, nodes is briefly [] before /api/nodes responds.
+  // On a hard refresh of #/nodes/UUID, nodes is briefly empty before BrowserService responds.
   const rosterLoaded = nodes.length > 0
   if (!node) {
     const stillLoading = !rosterLoaded
@@ -1206,4 +1206,3 @@ function ConnRow({ label, value }: { label: string; value: string | number }) {
     </div>
   )
 }
-

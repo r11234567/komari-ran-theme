@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchMe, fetchNodes, fetchPingHistory, fetchPublic, openLiveSocket } from '@/api/client'
+import { fetchMe, fetchNodes, fetchPublic, watchLiveStatus } from '@/api/client'
+import { fetchNodePing } from '@/api/ping'
 import type { PingHistory } from '@/api/client'
-import { makeOfflineRecord, normalizeNode, normalizeWsRecord, wsRecordEqual } from '@/api/normalize'
+import { normalizeNode, wsRecordEqual } from '@/api/normalize'
 import type {
   KomariMe,
   KomariNode,
   KomariPublicConfig,
   KomariRecord,
-  KomariRecordRaw,
 } from '@/types/komari'
 
 export type ConnStatus = 'connecting' | 'open' | 'closed' | 'error' | 'idle'
@@ -21,7 +21,7 @@ interface KomariState {
   conn: ConnStatus
   error: string | null
   ping: PingHistory
-  /** Timestamp of the most recent successful WS message (ms). */
+  /** Timestamp of the most recent successful Connect stream message (ms). */
   lastUpdate: number | null
 }
 
@@ -53,8 +53,7 @@ function mergePingIntoRecords(
   const pingRecords = Array.isArray(ping?.records) ? ping.records : []
   if (pingRecords.length === 0) return records
 
-  // Group recent ping samples by uuid. Komari sets `client = uuid` when the
-  // global endpoint /api/records/ping is queried without a uuid filter.
+  // Group typed Ping samples by agent UUID.
   const byUuid = new Map<string, { values: number[]; lost: number; total: number }>()
   for (const r of pingRecords) {
     const uuid = r?.client
@@ -91,19 +90,36 @@ function mergePingIntoRecords(
 }
 
 /**
- * useKomari — wires REST node list + WS live records + periodic ping fetch.
- * - WS reconnects automatically. Nodes not in `online[]` are marked offline.
+ * useKomari — wires typed browser reads + the Connect status stream.
+ * - The stream is cancelled when the theme unmounts.
  * - Ping history refreshes every 60s; covers the last 1 hour of all targets.
  * - `records` returned from this hook has per-node ping/loss merged in
- *   from the ping history endpoint (WS itself doesn't carry these).
+ *   from the typed metrics service.
  */
 export function useKomari(): KomariState {
   const [state, setState] = useState<KomariState>(INITIAL)
 
   useEffect(() => {
     let cancelled = false
+    let loadedNodes: KomariNode[] = []
 
-    Promise.all([fetchNodes(), fetchPublic(), fetchMe()])
+    const controller = new AbortController()
+    const refreshPing = (nodes = loadedNodes) => {
+      Promise.all(nodes.map((node) => fetchNodePing(node.uuid, 1, 240, { signal: controller.signal })))
+        .then((histories) => ({
+          count: histories.reduce((total, item) => total + item.records.length, 0),
+          tasks: [...new Map(histories.flatMap((item) => item.tasks).map((task) => [task.id, task])).values()],
+          records: histories.flatMap((item) => item.records),
+        }))
+        .then((ping) => {
+          if (!cancelled) setState((prev) => ({ ...prev, ping }))
+        })
+        .catch((error) => {
+          if (!controller.signal.aborted) console.warn('[ran] Connect ping query failed', error)
+        })
+    }
+
+    Promise.all([fetchNodes(controller.signal), fetchPublic(controller.signal), fetchMe()])
       .then(([rawNodes, config, me]) => {
         if (cancelled) return
         // Sort by `weight` ascending — Komari's admin drag-to-reorder writes
@@ -124,51 +140,28 @@ export function useKomari(): KomariState {
             if (aw !== bw) return aw - bw
             return (a.name ?? '').localeCompare(b.name ?? '')
           })
+        loadedNodes = nodes
         setState((prev) => ({ ...prev, nodes, config, me }))
+        refreshPing(nodes)
       })
       .catch((err) => {
         if (cancelled) return
         setState((prev) => ({ ...prev, error: String(err) }))
       })
 
-    const refreshPing = () => {
-      fetchPingHistory(1).then((ping) => {
-        if (cancelled) return
-        setState((prev) => ({ ...prev, ping }))
-      })
-    }
-    refreshPing()
     const pingTimer = setInterval(refreshPing, 60_000)
 
-    const sock = openLiveSocket({
+    const stream = watchLiveStatus({
       onStatus: (conn) => {
         if (cancelled) return
         setState((prev) => ({ ...prev, conn }))
       },
-      onMessage: (payload) => {
+      onRecord: (uuid, next) => {
         if (cancelled) return
         setState((prev) => {
           const records: Record<string, KomariRecord> = { ...prev.records }
-          const onlineSet = new Set(payload.online ?? [])
-
-          for (const [uuid, raw] of Object.entries(payload.data ?? {})) {
-            const next = normalizeWsRecord(uuid, raw as KomariRecordRaw, onlineSet.has(uuid))
-            const prevRec = prev.records[uuid]
-            // Preserve referential equality when nothing visible changed, so
-            // memoized cards/charts can skip re-rendering this node.
-            records[uuid] = prevRec && wsRecordEqual(prevRec, next) ? prevRec : next
-          }
-          for (const n of prev.nodes) {
-            if (!onlineSet.has(n.uuid)) {
-              const prevRec = prev.records[n.uuid]
-              // Already-offline node: reuse the prior placeholder reference
-              // (makeOfflineRecord only carries totals copied from prev).
-              records[n.uuid] =
-                prevRec && prevRec.online === false
-                  ? prevRec
-                  : makeOfflineRecord(n.uuid, prevRec)
-            }
-          }
+          const previous = prev.records[uuid]
+          records[uuid] = previous && wsRecordEqual(previous, next) ? previous : next
           return { ...prev, records, lastUpdate: Date.now() }
         })
       },
@@ -176,14 +169,15 @@ export function useKomari(): KomariState {
 
     return () => {
       cancelled = true
+      controller.abort(new DOMException('Theme unmounted', 'AbortError'))
       clearInterval(pingTimer)
-      sock.close()
+      stream.close()
     }
   }, [])
 
   // Fold per-node ping/loss into the records before exposing them. We do
-  // this in a memo (not in the WS handler) so a fresh ping fetch updates
-  // every consumer without needing to re-derive WS state.
+  // this in a memo so a fresh ping query updates every consumer without
+  // rebuilding the Connect stream state.
   const recordsWithPing = useMemo(
     () => mergePingIntoRecords(state.records, state.ping),
     [state.records, state.ping],
