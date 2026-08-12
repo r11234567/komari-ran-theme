@@ -1,5 +1,5 @@
 /**
- * TimeWindowSwitcher — [24h | 3d | 7d | 30d] segmented switcher used in
+ * TimeWindowSwitcher — retention-aware chart range selector.
  * the GLOBAL THROUGHPUT chart header to let users zoom the time window.
  *
  * Stateless — caller owns the current value and the change handler.
@@ -15,10 +15,15 @@ export interface TimeWindowOption {
 }
 
 export const DEFAULT_TIME_WINDOWS: TimeWindowOption[] = [
-  { hours: 24, label: '24H' },
-  { hours: 72, label: '3D' },
+  { hours: 0, label: '实时' },
+  { hours: 1, label: '1H' },
+  { hours: 6, label: '6H' },
+  { hours: 12, label: '12H' },
+  { hours: 24, label: '1D' },
   { hours: 168, label: '7D' },
+  { hours: 360, label: '15D' },
   { hours: 720, label: '30D' },
+  { hours: 1080, label: '45D' },
 ]
 
 interface Props {

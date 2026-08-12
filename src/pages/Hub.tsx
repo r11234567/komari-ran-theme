@@ -39,7 +39,8 @@ import {
 import { bucketLoadHistory } from '@/utils/load'
 import { aggregatePingByTarget, hasPingData } from '@/utils/ping'
 import { contentFs } from '@/utils/fontScale'
-import { filterWindowsByRetention, getRecordRetentionHours } from '@/utils/retention'
+import { getRecordRetentionHours } from '@/utils/retention'
+import { buildChartWindows } from '@/utils/chartWindows'
 import { useNodeHistory } from '@/hooks/useNodeHistory'
 import { useNodeTelemetry } from '@/hooks/useNodeTelemetry'
 import { NetworkQualityPanel } from '@/components/v2/NetworkQualityPanel'
@@ -51,19 +52,20 @@ import { type Theme } from '@/components/atoms/ThemePicker'
 
 type Conn = 'connecting' | 'open' | 'closed' | 'error' | 'idle'
 
-type WindowKey = '1h' | '6h' | '24h' | '7d'
+type WindowKey = string
 interface WindowSpec {
   key: WindowKey
   label: string
   hours: number
   buckets: number
 }
-const WINDOWS: WindowSpec[] = [
-  { key: '1h', label: '1H', hours: 1, buckets: 60 },
-  { key: '6h', label: '6H', hours: 6, buckets: 72 },
-  { key: '24h', label: '24H', hours: 24, buckets: 96 },
-  { key: '7d', label: '7D', hours: 24 * 7, buckets: 84 },
-]
+const buildWindows = (retentionHours: number): WindowSpec[] =>
+  buildChartWindows(retentionHours).map((window) => ({
+    key: window.key,
+    label: window.label,
+    hours: window.hours,
+    buckets: window.realtime ? 60 : Math.min(120, Math.max(60, Math.round(window.hours * 2))),
+  }))
 
 interface Props {
   uuid: string
@@ -853,16 +855,16 @@ export function HubPage({
   // Per-node history for the four charts — selectable time window. Mirrors
   // the WINDOWS spec used on NodeDetail so the same retention-aware
   // filtering applies here too.
-  const [windowKey, setWindowKey] = useState<WindowKey>('1h')
+  const [windowKey, setWindowKey] = useState<WindowKey>('live')
   const retentionHours = getRecordRetentionHours(config)
   const availableWindows = useMemo(
-    () => filterWindowsByRetention(WINDOWS, retentionHours),
+    () => buildWindows(retentionHours),
     [retentionHours],
   )
   const activeWindowKey: WindowKey = availableWindows.some((w) => w.key === windowKey)
     ? windowKey
     : availableWindows[0].key
-  const windowSpec = WINDOWS.find((w) => w.key === activeWindowKey) ?? WINDOWS[0]
+  const windowSpec = availableWindows.find((w) => w.key === activeWindowKey) ?? availableWindows[0]
   const HOURS = windowSpec.hours
   const BUCKETS = windowSpec.buckets
 

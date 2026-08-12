@@ -46,6 +46,8 @@ import type {
 } from '@/types/komari'
 import { useMobileDrawer, useIsMobile } from '@/hooks/useMediaQuery'
 import { useGlobalHistory } from '@/hooks/useGlobalHistory'
+import { buildChartWindows } from '@/utils/chartWindows'
+import { getRecordRetentionHours } from '@/utils/retention'
 
 import {
   useAggregateStats,
@@ -140,12 +142,20 @@ export function OverviewV2Page({
   // a second identical pull. When the user picks a longer window we issue
   // a parallel hook call for that range — it's a bigger fetch (more nodes
   // × more buckets) so we do it on demand only.
-  const [chartHours, setChartHours] = useState(24)
+  const [chartHours, setChartHours] = useState(0)
+  const chartQueryHours = chartHours === 0 ? 1 : chartHours
+  const chartWindowOptions = useMemo(
+    () => buildChartWindows(getRecordRetentionHours(config)).map((window) => ({
+      hours: window.realtime ? 0 : window.hours,
+      label: window.label,
+    })),
+    [config],
+  )
   const extendedHistory = useGlobalHistory(
     uuids,
-    chartHours,
+    chartQueryHours,
     60_000,
-    chartHours !== 24, // gate: only fetch when actually zoomed out
+    chartHours !== 24, // gate: only fetch when not reusing the shared 24h query
     true, // liveOnly
     true, // skipPing — this page never plots ping
     true, // skipDiskLoad — nor disk/load series
@@ -305,16 +315,19 @@ export function OverviewV2Page({
             totalIn={stats.totalNetDown}
             totalOut={stats.totalNetUp}
             windowLabel={
-              chartHours === 24
+              chartHours === 0
+                ? '实时'
+                : chartHours === 24
                 ? 'Last 24h'
-                : chartHours < 168
-                  ? `Last ${chartHours / 24}d`
+                : chartHours < 24
+                  ? `Last ${chartHours}h`
                   : chartHours === 168
                     ? 'Last 7d'
-                    : 'Last 30d'
+                    : `Last ${chartHours / 24}d`
             }
             timeWindow={chartHours}
             onTimeWindowChange={setChartHours}
+            timeWindowOptions={chartWindowOptions}
           />
 
           {/* ── 4. Mid row — 4 panels ── */}

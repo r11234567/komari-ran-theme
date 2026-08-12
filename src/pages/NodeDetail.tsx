@@ -33,6 +33,7 @@ import { useNodeHistory } from '@/hooks/useNodeHistory'
 import { hashFor } from '@/router/route'
 import { useMobileDrawer, useIsMobile } from '@/hooks/useMediaQuery'
 import { type Theme } from '@/components/atoms/ThemePicker'
+import { buildChartWindows, chartAxisLabels, chartWindowLabel } from '@/utils/chartWindows'
 
 type Conn = 'connecting' | 'open' | 'closed' | 'error' | 'idle'
 type WindowKey = string
@@ -48,35 +49,14 @@ interface WindowSpec {
   titleSuffix: string
 }
 
-function fWindowLabel(hours: number): string {
-  if (hours < 24) return `${hours}H`
-  const d = Math.round(hours / 24)
-  return `${d}D`
-}
-
-function fXLabels(hours: number): string[] {
-  return Array.from({ length: 7 }, (_, i) => {
-    if (i === 6) return 'now'
-    const remaining = hours * (1 - i / 6)
-    if (remaining < 24) return `-${Math.round(remaining)}h`
-    return `-${Math.round(remaining / 24)}d`
-  })
-}
-
 function buildWindows(retentionHours: number): WindowSpec[] {
-  const candidates = [1, 6, 24, 24 * 7, 24 * 30]
-  const ceil = Math.floor(retentionHours)
-  if (!candidates.includes(ceil) && ceil > 1) candidates.push(ceil)
-  candidates.sort((a, b) => a - b)
-  const filtered = candidates.filter((h) => h <= retentionHours)
-  if (filtered.length === 0) filtered.push(1)
-  return filtered.map((h) => ({
-    key: `${h}h`,
-    label: fWindowLabel(h),
-    hours: h,
-    buckets: Math.min(120, Math.max(60, Math.round(h * 2))),
-    xLabels: fXLabels(h),
-    titleSuffix: fWindowLabel(h),
+  return buildChartWindows(retentionHours).map((window) => ({
+    key: window.key,
+    label: window.label,
+    hours: window.hours,
+    buckets: window.realtime ? 60 : Math.min(120, Math.max(60, Math.round(window.hours * 2))),
+    xLabels: chartAxisLabels(window.hours),
+    titleSuffix: window.realtime ? '实时' : chartWindowLabel(window.hours),
   }))
 }
 
@@ -112,7 +92,7 @@ export function NodeDetailPage({
     isMobile,
   )
   // Hooks must be called before any early return.
-  const [windowKey, setWindowKey] = useState<WindowKey>('1h')
+  const [windowKey, setWindowKey] = useState<WindowKey>('live')
 
   // Filter windows by Komari record retention (record_preserve_time, in hours).
   const retentionHours = getRecordRetentionHours(config)
