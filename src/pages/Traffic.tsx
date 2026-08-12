@@ -15,7 +15,8 @@ import type { KomariNode, KomariPublicConfig, KomariRecord } from '@/types/komar
 import type { GlobalHistoryState } from '@/hooks/useGlobalHistory'
 import { useGlobalHistory } from '@/hooks/useGlobalHistory'
 import { formatBps, formatBytes } from '@/utils/format'
-import { buildHistoricalWindows, getRecordRetentionHours } from '@/utils/retention'
+import { getRecordRetentionHours } from '@/utils/retention'
+import { buildChartWindows, chartAxisLabels } from '@/utils/chartWindows'
 import { contentFs } from '@/utils/fontScale'
 import { hashFor } from '@/router/route'
 import { useMobileDrawer } from '@/hooks/useMediaQuery'
@@ -32,6 +33,26 @@ interface TimeWindow {
   titleSuffix: string
   /** Inline label spec for the bucket-axis below the area chart. */
   axisLabels: string[]
+}
+
+const buildTrafficWindows = (retentionHours: number): TimeWindow[] =>
+  buildChartWindows(retentionHours).map((window) => ({
+    key: window.key,
+    label: window.label,
+    hours: window.hours,
+    titleSuffix: window.label,
+    axisLabels: chartAxisLabels(window.hours),
+  }))
+
+function bytesShort(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0'
+  const units = ['B', 'K', 'M', 'G', 'T']
+  const idx = Math.min(
+    Math.floor(Math.log(Math.abs(bytes)) / Math.log(1024)),
+    units.length - 1,
+  )
+  const v = bytes / Math.pow(1024, idx)
+  return `${v.toFixed(idx === 0 ? 0 : 1)}${units[idx]}`
 }
 
 interface Props {
@@ -74,17 +95,13 @@ export function TrafficPage({
 }: Props) {
   const drawer = useMobileDrawer()
   const [sortBy, setSortBy] = useState<SortBy>('total')
-  const [timeKey, setTimeKey] = useState<TimeKey>('1h')
+  const [timeKey, setTimeKey] = useState<TimeKey>('live')
 
   // Filter time windows by Komari's record retention (record_preserve_time, in hours).
   // If retention is e.g. 24h, the 7D option simply isn't offered.
   const retentionHours = getRecordRetentionHours(config)
-  const availableWindows = useMemo<TimeWindow[]>(
-    () =>
-      buildHistoricalWindows(retentionHours).map((window) => ({
-        ...window,
-        axisLabels: window.xLabels,
-      })),
+  const availableWindows = useMemo(
+    () => buildTrafficWindows(retentionHours),
     [retentionHours],
   )
   // Clamp the active key to whatever's available (handles config arriving late).
@@ -97,7 +114,7 @@ export function TrafficPage({
   // For 1H we still use the prop-supplied global history (shared with Overview, no extra fetch).
   // For 6H/24H/7D we fetch our own windowed slice.
   const ownHistory = useGlobalHistory(
-    activeKey === '1h' ? [] : nodes.map((n) => n.uuid),
+    activeKey === 'live' ? [] : nodes.map((n) => n.uuid),
     win.hours,
     60_000,
     true,
@@ -105,7 +122,7 @@ export function TrafficPage({
     true, // skipPing — traffic charts never plot ping
   )
   const effectiveHistory: GlobalHistoryState | undefined =
-    activeKey === '1h' ? history : ownHistory
+    activeKey === 'live' ? history : ownHistory
 
   // Per-node traffic snapshot — pulled straight from live records.
   const nodeTraffic: NodeTraffic[] = useMemo(() => {

@@ -17,7 +17,7 @@
 import { useState } from 'react'
 import { Etch } from '@/components/atoms/Etch'
 import { SerialPlate } from '@/components/atoms/SerialPlate'
-import { TimeWindowSwitcher } from './TimeWindowSwitcher'
+import { TimeWindowSwitcher, type TimeWindowOption } from './TimeWindowSwitcher'
 import { contentFs } from '@/utils/fontScale'
 import { formatBytes, formatBps } from '@/utils/format'
 import { useIsMobile } from '@/hooks/useMediaQuery'
@@ -43,6 +43,7 @@ interface Props {
    */
   timeWindow?: number
   onTimeWindowChange?: (hours: number) => void
+  timeWindowOptions?: TimeWindowOption[]
 }
 
 function buildAreaPath(
@@ -99,6 +100,7 @@ export function GlobalThroughput24hChart({
   serial = 'T01',
   timeWindow,
   onTimeWindowChange,
+  timeWindowOptions,
 }: Props) {
   const [view, setView] = useState<ThroughputView>('both')
   const isMobile = useIsMobile()
@@ -153,6 +155,7 @@ export function GlobalThroughput24hChart({
             <TimeWindowSwitcher
               value={timeWindow}
               onChange={onTimeWindowChange}
+              options={timeWindowOptions}
             />
           )}
           <div

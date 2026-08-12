@@ -39,11 +39,8 @@ import {
 import { bucketLoadHistory } from '@/utils/load'
 import { aggregatePingByTarget, hasPingData } from '@/utils/ping'
 import { contentFs } from '@/utils/fontScale'
-import {
-  buildHistoricalWindows,
-  getPingRetentionHours,
-  getRecordRetentionHours,
-} from '@/utils/retention'
+import { getRecordRetentionHours } from '@/utils/retention'
+import { buildChartWindows } from '@/utils/chartWindows'
 import { useNodeHistory } from '@/hooks/useNodeHistory'
 import { useNodeTelemetry } from '@/hooks/useNodeTelemetry'
 import { NetworkQualityPanel } from '@/components/v2/NetworkQualityPanel'
@@ -56,6 +53,20 @@ import { type Theme } from '@/components/atoms/ThemePicker'
 type Conn = 'connecting' | 'open' | 'closed' | 'error' | 'idle'
 
 type WindowKey = string
+interface WindowSpec {
+  key: WindowKey
+  label: string
+  hours: number
+  buckets: number
+}
+const buildWindows = (retentionHours: number): WindowSpec[] =>
+  buildChartWindows(retentionHours).map((window) => ({
+    key: window.key,
+    label: window.label,
+    hours: window.hours,
+    buckets: window.realtime ? 60 : Math.min(120, Math.max(60, Math.round(window.hours * 2))),
+  }))
+
 interface Props {
   uuid: string
   nodes: KomariNode[]
@@ -107,9 +118,10 @@ function deriveHeartbeat7d(pingHistory: PingHistory): HeartbeatCell[] {
   const start = now - windowMs
   const cellMs = windowMs / CELLS
 
-	const cells: HeartbeatCell[] = Array.from({ length: CELLS }, (_, i) => {
-		const cellStart = start + i * cellMs
-		const date = new Date(cellStart)
+  const cells: HeartbeatCell[] = Array.from({ length: CELLS }, (_, i) => {
+    const cellStart = start + i * cellMs
+    const cellEnd = cellStart + cellMs
+    const date = new Date(cellStart)
     const day = date.getMonth() + 1 + '/' + date.getDate()
     const hour = String(date.getHours()).padStart(2, '0')
     return { state: -1 as -1 | 0 | 1, label: `${day} ${hour}:00` }
@@ -840,15 +852,13 @@ export function HubPage({
     return () => window.clearInterval(id)
   }, [])
 
-  // Per-node history for the four charts uses the shared retention-aware
-  // windows. This mixed load/latency view intentionally has no LIVE option.
-  const [windowKey, setWindowKey] = useState<WindowKey>('1h')
-  const retentionHours = Math.min(
-    getRecordRetentionHours(config),
-    getPingRetentionHours(config),
-  )
+  // Per-node history for the four charts — selectable time window. Mirrors
+  // the WINDOWS spec used on NodeDetail so the same retention-aware
+  // filtering applies here too.
+  const [windowKey, setWindowKey] = useState<WindowKey>('live')
+  const retentionHours = getRecordRetentionHours(config)
   const availableWindows = useMemo(
-    () => buildHistoricalWindows(retentionHours),
+    () => buildWindows(retentionHours),
     [retentionHours],
   )
   const activeWindowKey: WindowKey = availableWindows.some((w) => w.key === windowKey)
@@ -1467,12 +1477,7 @@ export function HubPage({
                 >
                   <div style={{ padding: '8px 12px 12px' }}>
                     {pingSeries.length > 0 ? (
-                      <PingChart
-                        series={pingSeries}
-                        height={120}
-                        times={bucketTimes}
-                        xLabels={windowSpec.xLabels}
-                      />
+                      <PingChart series={pingSeries} height={120} times={bucketTimes} />
                     ) : (
                       <div
                         style={{
