@@ -50,7 +50,7 @@ jobs:
           ARCHIVE: ${{ steps.package.outputs.archive }}
         run: |
           set -euo pipefail
-          gh release create "v${VERSION}" "$ARCHIVE" \
+          gh release create "v${VERSION}-${GITHUB_RUN_NUMBER}" "$ARCHIVE" \
             --target "$GITHUB_SHA" \
-            --title "Ran ${VERSION}" \
+            --title "Ran ${VERSION} (${GITHUB_RUN_NUMBER})" \
             --notes "Official Ran v2.1.2 interface migrated completely to typed Connect-RPC. Requires Komari browser/metrics contract v0.1.9 or newer; contains no JSON-RPC2, legacy REST, or Komari WebSocket fallback."
