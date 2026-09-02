@@ -47,31 +47,86 @@ function loadTheme(): Theme {
   return 'ran-night'
 }
 
+type EmbedConfig = { mode: 'hub' } | { mode: 'visitor'; lat: number; lon: number } | null
+
+/**
+ * embed 模式:被 iframe 嵌入时的精简渲染。
+ *   ?embed=1                 — Hub 卡片用,完整 WorldMapPro
+ *   ?embed=visitor&lat=&lon= — VisitorAlert 用,纯静态地图 + 一个高亮焦点
+ * URL 不会变,读一次即可。
+ */
+function readEmbedConfig(): EmbedConfig {
+  if (typeof window === 'undefined') return null
+  const sp = new URLSearchParams(window.location.search)
+  const v = sp.get('embed')
+  if (v === '1') return { mode: 'hub' }
+  if (v === 'visitor') {
+    const lat = parseFloat(sp.get('lat') ?? '')
+    const lon = parseFloat(sp.get('lon') ?? '')
+    if (Number.isFinite(lat) && Number.isFinite(lon)) return { mode: 'visitor', lat, lon }
+  }
+  return null
+}
+
+/**
+ * 跟随父页主题。同源 storage 事件只在"别的文档"写入时触发,正好用来让被
+ * 嵌入的地图跟着主页面切换。
+ */
+function useEmbedTheme() {
+  const [theme, setTheme] = useState<Theme>(loadTheme)
+
+  useEffect(() => {
+    document.body.setAttribute('data-theme', theme)
+  }, [theme])
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === THEME_KEY) setTheme(loadTheme())
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
+}
+
+/**
+ * 访客嵌入 —— VisitorAlert 的 iframe:一张静态地图加一个高亮点。
+ *
+ * 必须拆成独立组件。hooks 不能条件调用,所以只要它跟 useKomari() 待在同一个
+ * 组件里,哪怕紧接着 early return,ListAgents / GetPublicInfo /
+ * WatchAgentStatus 和整轮 ping 查询也都已经发出去了 —— 等于为了显示一个坐标
+ * 点,在 iframe 里又跑了一份数据流,还多挂一条常驻状态流。
+ */
+function VisitorEmbed({ lat, lon }: { lat: number; lon: number }) {
+  useEmbedTheme()
+  return (
+    <div
+      style={{
+        minHeight: '100vh',
+        background: 'var(--bg-1)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 4,
+      }}
+    >
+      <VisitorFocusMap lat={lat} lon={lon} />
+    </div>
+  )
+}
+
 export default function MapApp() {
+  const [embedConfig] = useState(readEmbedConfig)
+  if (embedConfig?.mode === 'visitor') {
+    return <VisitorEmbed lat={embedConfig.lat} lon={embedConfig.lon} />
+  }
+  return <MapAppFull embedConfig={embedConfig} />
+}
+
+function MapAppFull({ embedConfig }: { embedConfig: EmbedConfig }) {
   const [theme, setTheme] = useState<Theme>(loadTheme)
   const drawer = useMobileDrawer()
   const isMobile = useIsMobile()
   const { nodes, records, config, conn, lastUpdate } = useKomari()
-
-  // embed 模式:被 iframe 嵌入时的精简渲染。
-  //   ?embed=1                 — Hub 卡片用,完整 WorldMapPro
-  //   ?embed=visitor&lat=&lon= — VisitorAlert 用,纯静态地图 + 一个高亮焦点
-  //                               不调 useKomari、不画节点,零额外开销
-  // 用 useState 一次性读取(URL 不会变),避免每次渲染都查 location。
-  const [embedConfig] = useState(() => {
-    if (typeof window === 'undefined') return null
-    const sp = new URLSearchParams(window.location.search)
-    const v = sp.get('embed')
-    if (v === '1') return { mode: 'hub' as const }
-    if (v === 'visitor') {
-      const lat = parseFloat(sp.get('lat') ?? '')
-      const lon = parseFloat(sp.get('lon') ?? '')
-      if (Number.isFinite(lat) && Number.isFinite(lon)) {
-        return { mode: 'visitor' as const, lat, lon }
-      }
-    }
-    return null
-  })
   const embed = embedConfig !== null
 
   useEffect(() => {
@@ -102,10 +157,9 @@ export default function MapApp() {
   useEffect(() => {
     if (!embed) return
     const onStorage = (e: StorageEvent) => {
-      if (e.key !== THEME_KEY) return
-      if (e.newValue === 'ran-night' || e.newValue === 'ran-mist' || e.newValue === 'ran-ji') {
-        setTheme(e.newValue)
-      }
+      // loadTheme 认全部六个主题;逐个比对 newValue 的写法漏掉了
+      // ember/sakura/lavender,父页切到这三个时 hub 嵌入不会跟随。
+      if (e.key === THEME_KEY) setTheme(loadTheme())
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
@@ -167,25 +221,7 @@ export default function MapApp() {
   const subtitle = `${displayNodes.length} NODES · ${regionCount} REGIONS · GEO TRACKING`
 
   // embed 模式短路:只渲染地图本体,无 sidebar/topbar/footer/底部 stats。
-  //   - hub:   Hub 卡片用,完整 WorldMapPro
-  //   - visitor: VisitorAlert 用,纯静态轻量地图 + 单个高亮焦点
-  if (embedConfig?.mode === 'visitor') {
-    return (
-      <div
-        style={{
-          minHeight: '100vh',
-          background: 'var(--bg-1)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 4,
-        }}
-      >
-        <VisitorFocusMap lat={embedConfig.lat} lon={embedConfig.lon} />
-      </div>
-    )
-  }
-
+  // visitor 模式在 MapApp 里就分流走了,到不了这里。
   if (embed) {
     return (
       <div

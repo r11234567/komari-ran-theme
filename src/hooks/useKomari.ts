@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchMe, fetchNodes, fetchPublic, watchLiveStatus } from '@/api/client'
-import { fetchNodePing } from '@/api/ping'
+import { fetchFleetPing } from '@/api/ping'
 import type { PingHistory } from '@/api/client'
 import { normalizeNode, wsRecordEqual } from '@/api/normalize'
 import type {
@@ -105,7 +105,10 @@ export function useKomari(): KomariState {
 
     const controller = new AbortController()
     const refreshPing = (nodes = loadedNodes) => {
-      Promise.all(nodes.map((node) => fetchNodePing(node.uuid, 1, 240, { signal: controller.signal })))
+      // One query for the whole fleet: the metrics service takes an agent list
+      // and its bucket interval depends on the window, not on the agent count.
+      fetchFleetPing(nodes.map((node) => node.uuid), 1, 240, { signal: controller.signal })
+        .then((byUuid) => Object.values(byUuid))
         .then((histories) => ({
           count: histories.reduce((total, item) => total + item.records.length, 0),
           tasks: [...new Map(histories.flatMap((item) => item.tasks).map((task) => [task.id, task])).values()],
