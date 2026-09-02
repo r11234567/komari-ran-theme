@@ -3,7 +3,7 @@
 > 精密金工质感的 Komari 探针面板主题
 > Precision-machined hi-fi gear, rendered as a server monitoring panel.
 
-[![version](https://img.shields.io/badge/version-2.1.2--lts.4-c8a86c?style=flat-square)](https://github.com/r11234567/komari-ran-theme/releases)
+[![version](https://img.shields.io/badge/version-2.1.3--connect.1-c8a86c?style=flat-square)](https://github.com/r11234567/komari-ran-theme/releases)
 [![demo](https://img.shields.io/badge/demo-obsr.net-2d6a4f?style=flat-square)](https://obsr.net)
 [![license](https://img.shields.io/badge/license-MIT-666?style=flat-square)](#许可)
 
@@ -27,7 +27,7 @@
 
 ### Traffic · 全网流量
 
-累计流量、上下行、实时吞吐 + 全网流量趋势(1H / 6H / 12H / 1D / 7D / 15D 递增窗口)+ Top Talkers 排行(`TOTAL / TX / RX / LIVE`)。
+累计流量、上下行、实时吞吐 + 全网流量趋势(1H / 6H / 24H / 7D)+ Top Talkers 排行(`TOTAL / TX / RX / LIVE`)。
 
 ![traffic](./docs/screenshots/03-traffic.png)
 
@@ -84,7 +84,7 @@ v1.0 起全面支持手机访问。Sidebar 在 < 768px 改为汉堡抽屉(slide-
 |---|---|
 | `#/overview` | 顶部 4 stat + 节点卡网格/行,组/状态过滤 |
 | `#/nodes` | 节点全列表,按 NAME/REGION/CPU/MEM/LOAD/NET/EXPIRE 排序 |
-| `#/nodes/{uuid}` | 单节点详情,负载 LIVE + 1H/6H/12H/1D/7D/15D 递增窗口，Ping 使用相同历史窗口但不提供 LIVE |
+| `#/nodes/{uuid}` | 单节点详情,4 chart × 1H/6H/24H/7D 时长选择 |
 | `#/hub/{uuid}` | 单节点 Hub 驾驶舱(进阶模块,响应式 3/2/1 列) |
 | `#/traffic` | 全网流量,Top Talkers,区域分布 |
 | `#/billing` | 订阅汇总,Renewal Timeline,Cost Trend·12M,By Continent |
@@ -92,7 +92,7 @@ v1.0 起全面支持手机访问。Sidebar 在 < 768px 改为汉堡抽屉(slide-
 
 ## 安装
 
-前往 [LTS Releases](https://github.com/r11234567/komari-ran-theme/releases) 下载最新 zip,在 Komari 后台 → 主题管理 → 上传主题 应用。
+前往 [Releases](https://github.com/saladinxp/komari-ran-theme/releases) 下载最新 zip,在 Komari 后台 → 主题管理 → 上传主题 应用。
 
 ## Billing 字段要求
 
@@ -117,7 +117,7 @@ Komari 后台 → 主题管理 → 岚 → 配置面板,支持以下后台开关
 |---|---|---|---|
 | `default_theme` | `ran-night` / `ran-mist` | `ran-night` | 首次加载默认主题,墨石(深) / 雾色(浅);用户切换后浏览器记忆偏好 |
 | `font_scale` | `standard` / `large` / `xlarge` | `standard` | 字体大小三档,内容字按 1× / 1.18× / 1.36× 缩放;装饰字与布局尺寸不变 |
-| `version_tag` | string | `v2.1.2-lts.4` | 页脚显示的版本标识 |
+| `version_tag` | string | `v2.1.3-connect.1` | 页脚显示的版本标识 |
 
 ### ◇ HUD // 浮卡 + 流量
 
@@ -130,7 +130,7 @@ Komari 后台 → 主题管理 → 岚 → 配置面板,支持以下后台开关
 
 | 配置项 | 类型 | 默认 | 说明 |
 |---|---|---|---|
-| `site_name` | string | `岚 · Komari` | Topbar 显示的站点名,留空则使用 Komari `/api/public` 的 `site_name` |
+| `site_name` | string | `岚 · Komari` | Topbar 显示的站点名,留空则使用 BrowserService 返回的站点名 |
 | `footer_text` | string | `POWERED BY KOMARI` | 页脚右侧文字 |
 
 ### ◇ BEIAN // 备案
@@ -144,14 +144,12 @@ Komari 后台 → 主题管理 → 岚 → 配置面板,支持以下后台开关
 
 ## 数据接入
 
-主题部署后默认连同源的 Komari API:
+主题部署后通过同源 Connect-RPC 读取 Komari 数据:
 
-- `GET /api/nodes` — 节点列表
-- `GET /api/public` — 站点配置(站点名、retention 等)
-- `POST /api/v1/history/query` — LTS 有界负载与 Ping 历史兼容层
-- `POST /api/rpc2` — 指标与 Ping 统计；失败时回退有界历史接口
-- `GET /api/records/load|ping` — 旧版 Komari 的最终兼容回退
-- `WebSocket /api/clients` — 实时数据,1s 间隔轮询(请求-响应模式),自动重连
+- `BrowserService` — 节点列表、站点配置和可取消的实时状态流
+- `MetricsService` — 有界负载/Ping 历史、指标定义、Ping 任务和统计
+
+主题不调用 JSON-RPC、REST 或 WebSocket 兼容接口。需要 Komari Connect 主题 API（`komari-proto v0.1.9` 或更新版本）。
 
 API 不可达时(如本地 `npm run dev` 单独跑),会自动切到 mock 数据预览。
 

@@ -23,7 +23,7 @@ interface Props {
   regionCount?: number
   /** Connection live? Drives the leading green dot */
   isLive?: boolean
-  /** Last WS update timestamp (ms) — drives the "SYNC Xs ago" tail */
+  /** Last Connect stream update timestamp (ms) — drives the "SYNC Xs ago" tail */
   lastUpdate?: number | null
 }
 

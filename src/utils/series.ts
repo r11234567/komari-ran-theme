@@ -1,6 +1,6 @@
 /**
  * Deterministic seeded series generator — for mock charts during development.
- * Replace consumers with real WS/REST data when wiring Komari API.
+ * Connect-backed consumers replace these mock values in production.
  */
 
 function mulberry32(a: number) {

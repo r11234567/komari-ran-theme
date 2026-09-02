@@ -118,24 +118,6 @@ export default function App() {
     setBpsUnitMode(parseBpsUnitMode(raw))
   }, [config?.theme_settings?.bps_unit])
 
-  // Cover mode — render only the theme thumbnail card.
-  if (isCoverMode()) {
-    const params = new URLSearchParams(window.location.search)
-    const coverTheme = (params.get('theme') as Theme) || theme
-    return (
-      <div
-        style={{
-          display: 'inline-block',
-          padding: 0,
-          margin: 0,
-          background: 'transparent',
-        }}
-      >
-        <ThemeCover theme={coverTheme} />
-      </div>
-    )
-  }
-
   // Dev-only mock fallback: only kick in when running outside a real Komari host
   // (e.g. file:// preview, or an empty origin). On a real http(s) origin we wait
   // for the API to load — using mock there would briefly route a real-uuid detail
@@ -170,6 +152,24 @@ export default function App() {
     const firstOnline = displayNodes.find((n) => displayRecords[n.uuid]?.online)
     return firstOnline?.uuid ?? displayNodes[0]?.uuid
   }, [displayNodes, displayRecords])
+
+  // Cover mode still executes all hooks above so the component hook order is stable.
+  if (isCoverMode()) {
+    const params = new URLSearchParams(window.location.search)
+    const coverTheme = (params.get('theme') as Theme) || theme
+    return (
+      <div
+        style={{
+          display: 'inline-block',
+          padding: 0,
+          margin: 0,
+          background: 'transparent',
+        }}
+      >
+        <ThemeCover theme={coverTheme} />
+      </div>
+    )
+  }
 
   // Route dispatch
   switch (route.name) {

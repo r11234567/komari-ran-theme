@@ -2,28 +2,6 @@
 
 > Notable changes to 岚 (Ran) — Komari probe theme.
 
-## v2.1.2-lts.4 — 2026-08-08
-
-### Fixed
-
-- Connect valid long-window downsampled samples in timestamp order so latency and load curves remain visible instead of becoming isolated hover-only points.
-
-## v2.1.2-lts.3 — 2026-08-08
-
-### Fixed
-
-- Render isolated latency samples in long downsampled windows. Sparse points remain separated across real data gaps but are no longer invisible move-only SVG paths.
-- Treat non-finite chart values as empty buckets so one invalid sample cannot invalidate an entire SVG path.
-
-## v2.1.2-lts.2 — 2026-08-08
-
-### Komari 1.2.5-LTS compatibility
-
-- Added a bounded history compatibility client matching the Mochi LTS adapter: 25-second request timeout, server-side point budgets, Load/Ping response conversion, and legacy REST fallback.
-- Kept `public:queryMetrics` as the preferred Ping and fleet-history path while making single-node load history use `/api/v1/history/query` instead of unbounded legacy queries.
-- Added LTS load/Ping windows, including live load, 1H/6H/12H/1D/7D and 15-day increments up to the configured retention period.
-- Fixed the installable archive layout. The ZIP root now contains `komari-theme.json`, `preview.png`, and the complete `dist/` directory expected by Komari.
-
 ## v1.0.7 — 2026-05
 
 ### 打磨 / Polish

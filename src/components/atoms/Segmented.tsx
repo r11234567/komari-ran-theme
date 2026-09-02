@@ -24,8 +24,6 @@ export function Segmented({ options, value, onChange, size = 'md' }: Props) {
     <div
       style={{
         display: 'inline-flex',
-        maxWidth: '100%',
-        overflowX: 'auto',
         background: 'var(--bg-inset)',
         border: '1px solid var(--edge-engrave)',
         borderRadius: 4,
@@ -41,7 +39,6 @@ export function Segmented({ options, value, onChange, size = 'md' }: Props) {
             type="button"
             onClick={() => onChange(opt.value)}
             style={{
-              flex: '0 0 auto',
               padding: `${padY}px ${padX}px`,
               fontFamily: 'var(--font-mono)',
               fontSize,

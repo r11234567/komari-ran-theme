@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchPingQuality, queryMetrics, supportsMetricStore, type PingQualityStat } from '@/api/rpc2'
+import { fetchPingQuality, queryMetrics, type PingQualityStat } from '@/api/metrics'
 
 export interface NodeTelemetry {
   /** Per-ping-task latency distribution. Empty on Komari < 1.2.6. */
@@ -46,20 +46,17 @@ export function useNodeTelemetry(uuid: string, hours = 24, refreshMs = 60_000): 
   useEffect(() => {
     if (!uuid) return
     let cancelled = false
+    const controller = new AbortController()
 
     const refresh = async () => {
-      if (!(await supportsMetricStore())) {
-        if (!cancelled) setState({ ...EMPTY, loading: false, supported: false })
-        return
-      }
-
       const [quality, series] = await Promise.all([
-        fetchPingQuality(uuid, hours).catch(() => [] as PingQualityStat[]),
+        fetchPingQuality(uuid, hours, controller.signal).catch(() => [] as PingQualityStat[]),
         queryMetrics({
           metricKeys: ['connections.tcp', 'connections.udp', 'process.count'],
           entityId: uuid,
           hours,
           maxPoints: 60,
+          signal: controller.signal,
         }).catch(() => []),
       ])
 
@@ -93,6 +90,7 @@ export function useNodeTelemetry(uuid: string, hours = 24, refreshMs = 60_000): 
     const t = setInterval(refresh, refreshMs)
     return () => {
       cancelled = true
+      controller.abort(new DOMException('Telemetry unmounted', 'AbortError'))
       clearInterval(t)
     }
   }, [uuid, hours, refreshMs])

@@ -30,14 +30,12 @@ export function useNodeHistory(uuid: string, hours = 1, refreshMs = 60_000): Nod
   useEffect(() => {
     if (!uuid) return
     let cancelled = false
+    const controller = new AbortController()
 
     const refresh = async () => {
       const [load, ping] = await Promise.all([
-        fetchNodeLoadHistory(uuid, hours),
-        // Metric store (1.2.6+) honours `hours`; legacy fallback inside.
-        // The LTS bridge treats maxPoints as a response-wide budget. 3000
-        // keeps roughly 60 aligned latency/loss points for 22 Ping tasks.
-        fetchNodePing(uuid, hours, 3000),
+        fetchNodeLoadHistory(uuid, hours, controller.signal),
+        fetchNodePing(uuid, hours, 500, { signal: controller.signal }),
       ])
       if (cancelled) return
       setState({ load, ping, loading: false })
@@ -49,6 +47,7 @@ export function useNodeHistory(uuid: string, hours = 1, refreshMs = 60_000): Nod
 
     return () => {
       cancelled = true
+      controller.abort(new DOMException('History unmounted', 'AbortError'))
       clearInterval(t)
     }
   }, [uuid, hours, refreshMs])

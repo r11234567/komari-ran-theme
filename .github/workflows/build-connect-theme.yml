@@ -1,0 +1,56 @@
+name: Build and release Ran Connect theme
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run lint
+      - name: Reject legacy Komari transports
+        run: |
+          set -euo pipefail
+          ! grep -RIE 'rpc2|jsonrpc|/api/rpc|/api/clients|new WebSocket' src dist
+      - name: Package theme
+        id: package
+        run: |
+          set -euo pipefail
+          version="$(node -p "JSON.parse(require('fs').readFileSync('komari-theme.json', 'utf8')).version")"
+          archive="ran-connect-v${version}.zip"
+          zip -qr "$archive" komari-theme.json preview.png dist/
+          unzip -Z1 "$archive" | grep -qx 'komari-theme.json'
+          unzip -Z1 "$archive" | grep -qx 'preview.png'
+          unzip -Z1 "$archive" | grep -qx 'dist/index.html'
+          unzip -Z1 "$archive" | grep -qx 'dist/map.html'
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v5
+        with:
+          name: ran-connect-${{ github.sha }}
+          path: ${{ steps.package.outputs.archive }}
+          if-no-files-found: error
+      - name: Publish release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.package.outputs.version }}
+          ARCHIVE: ${{ steps.package.outputs.archive }}
+        run: |
+          set -euo pipefail
+          gh release create "v${VERSION}-${GITHUB_RUN_NUMBER}" "$ARCHIVE" \
+            --target "$GITHUB_SHA" \
+            --title "Ran ${VERSION} (${GITHUB_RUN_NUMBER})" \
+            --notes "Official Ran v2.1.2 interface migrated completely to typed Connect-RPC. Requires Komari browser/metrics contract v0.1.9 or newer; contains no JSON-RPC2, legacy REST, or Komari WebSocket fallback."

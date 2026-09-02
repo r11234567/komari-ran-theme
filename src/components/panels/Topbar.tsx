@@ -21,7 +21,7 @@ interface Props {
   online: number
   total: number
   conn: Conn
-  /** Timestamp of the last successful WS message, for the "Xs ago" hint. */
+  /** Timestamp of the last successful Connect stream message. */
   lastUpdate?: number | null
   /**
    * When provided, render a hamburger button on the left that calls this
