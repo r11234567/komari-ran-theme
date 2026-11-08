@@ -4,6 +4,8 @@ import { SerialPlate } from '@/components/atoms/SerialPlate'
 import { StatusDot } from '@/components/atoms/StatusDot'
 import { ThemePicker } from '@/components/atoms/ThemePicker'
 import { ViewVersionSwitcher } from '@/components/atoms/ViewVersionSwitcher'
+import { LanguagePicker } from '@/components/atoms/LanguagePicker'
+import { useI18n } from '@/i18n'
 import { Icon } from '@/components/atoms/icons'
 import { useIsMobile, useIsNarrow } from '@/hooks/useMediaQuery'
 import { useSearchQuery, nodeMatchesQuery } from '@/hooks/useSearchQuery'
@@ -79,6 +81,7 @@ export function Topbar({
   viewVersion,
   onViewVersionChange,
 }: Props) {
+  const { t } = useI18n()
   const isMobile = useIsMobile()
   const isNarrow = useIsNarrow()
   const connStatus =
@@ -367,7 +370,7 @@ export function Topbar({
                     setTimeout(() => setFocused(false), 120)
                   }}
                   onKeyDown={onInputKeyDown}
-                  placeholder="SEARCH NODES"
+                  placeholder={t('search.placeholder')}
                   spellCheck={false}
                   autoComplete="off"
                   style={{
@@ -446,6 +449,7 @@ export function Topbar({
             onChange={onViewVersionChange}
           />
         )}
+        <LanguagePicker size="sm" />
         <ThemePicker value={theme} onChange={(v) => onTheme(v)} />
       </div>
 
@@ -487,7 +491,7 @@ export function Topbar({
               onFocus={() => setFocused(true)}
               onBlur={() => setTimeout(() => setFocused(false), 120)}
               onKeyDown={onInputKeyDown}
-              placeholder="SEARCH NODES"
+              placeholder={t('search.placeholder')}
               spellCheck={false}
               autoComplete="off"
               style={{

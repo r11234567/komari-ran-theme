@@ -44,6 +44,16 @@ export interface KomariNode {
    *   'sum' (求和)   — compare up + down against the limit
    */
   traffic_limit_type?: 'max' | 'sum' | string
+  /**
+   * Monthly traffic reset day: 1-31, 0: disabled, undefined: none / follow agent.
+   */
+  traffic_reset_day?: number
+  /** Reset time clock string (e.g. "00:00:00"). */
+  traffic_reset_time?: string
+  /** Reset timezone (e.g. "Asia/Shanghai", "UTC"). */
+  traffic_reset_timezone?: string
+  /** Next scheduled reset instant as an ISO timestamp string. */
+  traffic_next_reset?: string
   /** VPS / hosting provider name — Hetzner, Vultr, OVH, etc. May not be in Komari yet. */
   provider?: string
   weight?: number

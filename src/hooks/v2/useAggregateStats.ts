@@ -69,6 +69,10 @@ export function isRecordDegraded(rec: KomariRecord | undefined): boolean {
   if (typeof rec.ping === 'number' && rec.ping > 200) return true
   // loss field is a percent (0..100), threshold 5%
   if (typeof rec.loss === 'number' && rec.loss > 5) return true
+  // Disk capacity >= 90%
+  if (rec.disk_used && rec.disk_total && rec.disk_total > 0) {
+    if ((rec.disk_used / rec.disk_total) * 100 > 90) return true
+  }
   return false
 }
 

@@ -13,6 +13,7 @@ import { SummaryStatCard } from './SummaryStatCard'
 import { Sparkline } from '@/components/charts/Sparkline'
 import { contentFs } from '@/utils/fontScale'
 import { formatBytes } from '@/utils/format'
+import { useI18n } from '@/i18n'
 
 /**
  * EmptySpark — shown in place of a Sparkline when there aren't yet
@@ -66,6 +67,7 @@ interface ActiveAlertsProps {
   /** Optional mini 24h alert volume series for the side mini-bar viz */
   volumeSeries?: number[]
   serial?: string
+  onViewAlerts?: () => void
 }
 
 /**
@@ -119,11 +121,9 @@ export function ActiveAlertsCard({
   summary,
   volumeSeries,
   serial = 'A01',
+  onViewAlerts,
 }: ActiveAlertsProps) {
-  // Use the real 24h history. If no history has accumulated yet, the
-  // series is all zeros — AlertVolumeBars renders tiny baseline bars
-  // (height 2px) which read as "no alerts in this period" rather than
-  // a placeholder.
+  const { t } = useI18n()
   const series = volumeSeries ?? new Array(12).fill(0)
 
   const valueColor =
@@ -135,7 +135,7 @@ export function ActiveAlertsCard({
 
   return (
     <SummaryStatCard
-      label="ACTIVE ALERTS"
+      label={t('card.active_alerts')}
       serial={serial}
       value={summary.counts.total}
       valueColor={valueColor}
@@ -143,17 +143,18 @@ export function ActiveAlertsCard({
       subline={
         <span>
           <span style={{ color: 'var(--signal-bad)' }}>
-            {summary.counts.critical} Critical
+            {summary.counts.critical} {t('level.critical')}
           </span>
           {' · '}
           <span style={{ color: 'var(--signal-warn)' }}>
-            {summary.counts.warning} Warning
+            {summary.counts.warning} {t('level.warning')}
           </span>
         </span>
       }
       footer={
-        <a
-          href="#/v2/overview"
+        <button
+          type="button"
+          onClick={onViewAlerts}
           style={{
             display: 'inline-block',
             padding: '3px 9px',
@@ -161,14 +162,14 @@ export function ActiveAlertsCard({
             border: '1px solid var(--edge-engrave)',
             borderRadius: 3,
             color: 'var(--fg-1)',
-            textDecoration: 'none',
             fontSize: contentFs(9),
             letterSpacing: '0.14em',
             fontFamily: 'var(--font-mono)',
+            cursor: 'pointer',
           }}
         >
-          VIEW ALERTS
-        </a>
+          {t('btn.view_alerts')}
+        </button>
       }
     />
   )
@@ -194,6 +195,7 @@ export function ThroughputSummaryCard({
   deltaPct,
   serial = 'T01',
 }: ThroughputSummaryProps) {
+  const { t } = useI18n()
   const formatted = formatBytes(totalBytes, 1)
   // Split "85.4 TB" into number + unit
   const m = formatted.match(/^(.+?)\s*([A-Z]+)$/)
@@ -202,7 +204,7 @@ export function ThroughputSummaryCard({
 
   return (
     <SummaryStatCard
-      label="GLOBAL THROUGHPUT"
+      label={t('card.global_throughput')}
       serial={serial}
       value={numStr}
       unit={unitStr}
@@ -267,6 +269,7 @@ export function AvgPacketLossCard({
   deltaPct,
   serial = 'L01',
 }: AvgPacketLossProps) {
+  const { t } = useI18n()
   const pct = typeof avgLoss === 'number' ? avgLoss * 100 : undefined
   const valueColor =
     typeof pct === 'number'
@@ -279,7 +282,7 @@ export function AvgPacketLossCard({
 
   return (
     <SummaryStatCard
-      label="AVG PACKET LOSS"
+      label={t('card.avg_packet_loss')}
       serial={serial}
       value={typeof pct === 'number' ? pct.toFixed(2) : '—'}
       unit={typeof pct === 'number' ? '%' : undefined}
@@ -397,13 +400,14 @@ export function ExpiringSoonCard({
   serial = 'E01',
   onViewDetails,
 }: ExpiringSoonProps) {
+  const { t } = useI18n()
   const ratio = stats.total > 0 ? stats.expiringSoon / stats.total : 0
   const valueColor =
     stats.expiringSoon > 0 ? 'var(--accent-bright)' : 'var(--fg-0)'
 
   return (
     <SummaryStatCard
-      label="EXPIRING SOON"
+      label={t('card.expiring_soon')}
       serial={serial}
       value={stats.expiringSoon}
       valueColor={valueColor}

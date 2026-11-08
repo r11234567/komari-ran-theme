@@ -3,6 +3,8 @@ import { Etch } from '@/components/atoms/Etch'
 import { Icon } from '@/components/atoms/icons'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { hashFor, type Route } from '@/router/route'
+import { useI18n } from '@/i18n'
+import { LanguagePicker } from '@/components/atoms/LanguagePicker'
 
 interface NavItem {
   id: Route['name']
@@ -59,6 +61,7 @@ export function Sidebar({
   mobileOpen = false,
   onMobileClose,
 }: Props) {
+  const { t } = useI18n()
   const isMobile = useIsMobile()
 
   // Auto-close the drawer on route change. Hash-routes update the URL hash,
@@ -88,15 +91,26 @@ export function Sidebar({
     }
   }, [isMobile, mobileOpen])
 
+  const navKeyMap: Record<string, string> = {
+    overview: 'nav.overview',
+    nodes: 'nav.nodes',
+    hub: 'nav.hub',
+    traffic: 'nav.traffic',
+    billing: 'nav.billing',
+    map: 'nav.geo_map',
+  }
+
   const nav: NavItem[] = NAV_BASE.map((item) => {
+    const label = t(navKeyMap[item.id] ?? item.label)
     if (item.id === 'hub') {
       return {
         ...item,
+        label,
         enabled: !!hubTargetUuid,
         uuidLink: hubTargetUuid,
       }
     }
-    return { ...item, enabled: true }
+    return { ...item, label, enabled: true }
   })
 
   // Mobile-drawer mode lifts the aside out of the document flow and
@@ -296,6 +310,11 @@ export function Sidebar({
         </nav>
 
         <div style={{ marginTop: 'auto', padding: 12, borderTop: '1px solid var(--edge-engrave)' }}>
+          {isMobile && (
+            <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
+              <LanguagePicker size="sm" />
+            </div>
+          )}
           {/* Admin entry — Komari 后台登录入口。
               做成"铭牌按钮"风格:跟 SerialPlate 同款蚀刻工艺,
               比之前的虚线小字醒目,但视觉权重控制在"管理员才用"的范围内。 */}

@@ -1,24 +1,24 @@
 /**
  * useRecentEvents — derive "RECENT EVENTS" from node status transitions.
  *
- * Komari has no native event log, so we derive events by diffing snapshots:
- *   - online → offline    = '节点离线'
- *   - offline → online    = '节点恢复在线'
- *   - good → degraded     = '节点进入降级'
- *   - degraded → good     = '节点恢复正常'
+ * Tracks node transitions:
+ *   - online → offline    = '节点离线' / 'Node Offline'
+ *   - offline → online    = '节点恢复在线' / 'Node Recovered'
+ *   - good → degraded     = '节点进入降级' / 'Node Degraded'
+ *   - degraded → good     = '节点恢复正常' / 'Node Normalized'
  *
  * Events are kept in localStorage (so they survive page reload) and capped
  * at `maxEvents` per session.
  *
- * Storage shape:
- *   ran.v2.recentEvents = [{ t, uuid, name, kind, message }, ...]
- *
- * The hook returns the list sorted newest-first.
+ * Anti-flapping & initialization guards:
+ *   - Hydration guard: suppresses false "Node Recovered" storm on page load.
+ *   - Hysteresis: debounces momentary 1-second metric spikes.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { KomariNode, KomariRecord } from '@/types/komari'
 import { isRecordDegraded } from './useAggregateStats'
+import { useI18n } from '@/i18n'
 
 export type EventKind = 'down' | 'up' | 'degraded' | 'recovered'
 
@@ -27,16 +27,18 @@ export interface NodeEvent {
   uuid: string
   name: string
   kind: EventKind
-  message: string    // human-readable, e.g. "节点恢复在线"
+  message: string    // human-readable, localized
 }
 
 const STORAGE_KEY = 'ran.v2.recentEvents'
 const DEFAULT_MAX_EVENTS = 50
 const DEFAULT_RETENTION_MS = 24 * 60 * 60 * 1000  // 24h
+const FLAP_THRESHOLD_MS = 15_000                  // 15s debounce for degraded flapping
 
 interface PerNodeState {
   online: boolean
   degraded: boolean
+  lastTransition: number
 }
 
 function loadEvents(): NodeEvent[] {
@@ -58,7 +60,7 @@ function loadEvents(): NodeEvent[] {
   }
 }
 
-function saveEvents(events: NodeEvent[]): void {
+export function saveEvents(events: NodeEvent[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(events))
   } catch {
@@ -66,12 +68,24 @@ function saveEvents(events: NodeEvent[]): void {
   }
 }
 
-function describe(kind: EventKind): string {
+export function clearEvents(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+    window.dispatchEvent(new Event('ran.clearEvents'))
+  } catch {
+    // ignore
+  }
+}
+
+function describe(
+  kind: EventKind,
+  t: (k: string, p?: Record<string, string | number>) => string,
+): string {
   switch (kind) {
-    case 'down': return '节点离线'
-    case 'up': return '节点恢复在线'
-    case 'degraded': return '节点进入降级'
-    case 'recovered': return '节点恢复正常'
+    case 'down': return t('alert.node_offline')
+    case 'up': return t('alert.node_recovered')
+    case 'degraded': return t('alert.enter_degraded')
+    case 'recovered': return t('alert.recover_normal')
   }
 }
 
@@ -85,28 +99,63 @@ export function useRecentEvents(
   records: Record<string, KomariRecord>,
   options: UseRecentEventsOptions = {},
 ): NodeEvent[] {
+  const { t } = useI18n()
   const maxEvents = options.maxEvents ?? DEFAULT_MAX_EVENTS
   const retentionMs = options.retentionMs ?? DEFAULT_RETENTION_MS
   const [events, setEvents] = useState<NodeEvent[]>(() => loadEvents())
 
+  useEffect(() => {
+    const handleClear = () => setEvents([])
+    window.addEventListener('ran.clearEvents', handleClear)
+    return () => window.removeEventListener('ran.clearEvents', handleClear)
+  }, [])
+
   // Per-node prior state, retained across renders
-  const [priorState] = useState<Record<string, PerNodeState>>({})
+  const priorState = useRef<Record<string, PerNodeState>>({})
+  // Hydration ref: ignore the very first batch of records to avoid false "recovered online" events
+  const isHydrated = useRef(false)
 
   useEffect(() => {
+    // If no nodes or records map is still empty, do not run transition detection yet
+    if (nodes.length === 0 || Object.keys(records).length === 0) {
+      return
+    }
+
     const now = Date.now()
     const cutoff = now - retentionMs
+
+    // Baseline establishment: first time we see populated records
+    if (!isHydrated.current) {
+      for (const node of nodes) {
+        const r = records[node.uuid]
+        const isOnline = !!r?.online
+        const isDegraded = isOnline && isRecordDegraded(r)
+        priorState.current[node.uuid] = {
+          online: isOnline,
+          degraded: isDegraded,
+          lastTransition: now,
+        }
+      }
+      isHydrated.current = true
+      return
+    }
+
     const newEvents: NodeEvent[] = []
 
     for (const node of nodes) {
       const r = records[node.uuid]
       const isOnline = !!r?.online
       const isDegraded = isOnline && isRecordDegraded(r)
-      const prior = priorState[node.uuid]
+      const prior = priorState.current[node.uuid]
       const name = node.name ?? node.uuid.slice(0, 8)
 
-      // First time seeing this node — just record state, don't emit event
+      // Brand new node registered while running
       if (!prior) {
-        priorState[node.uuid] = { online: isOnline, degraded: isDegraded }
+        priorState.current[node.uuid] = {
+          online: isOnline,
+          degraded: isDegraded,
+          lastTransition: now,
+        }
         continue
       }
 
@@ -118,27 +167,37 @@ export function useRecentEvents(
           uuid: node.uuid,
           name,
           kind,
-          message: describe(kind),
+          message: describe(kind, t),
         })
+        priorState.current[node.uuid] = {
+          online: isOnline,
+          degraded: isDegraded,
+          lastTransition: now,
+        }
       } else if (isOnline) {
-        // Online both before and after — check degraded transition
+        // Online both before and after — check degraded transition with anti-flapping debounce
         if (prior.degraded !== isDegraded) {
-          const kind: EventKind = isDegraded ? 'degraded' : 'recovered'
-          newEvents.push({
-            t: now,
-            uuid: node.uuid,
-            name,
-            kind,
-            message: describe(kind),
-          })
+          if (now - prior.lastTransition >= FLAP_THRESHOLD_MS) {
+            const kind: EventKind = isDegraded ? 'degraded' : 'recovered'
+            newEvents.push({
+              t: now,
+              uuid: node.uuid,
+              name,
+              kind,
+              message: describe(kind, t),
+            })
+            priorState.current[node.uuid] = {
+              online: isOnline,
+              degraded: isDegraded,
+              lastTransition: now,
+            }
+          }
         }
       }
-
-      priorState[node.uuid] = { online: isOnline, degraded: isDegraded }
     }
 
     if (newEvents.length === 0) {
-      // Even if no new events, evict expired from storage occasionally
+      // Evict expired from storage occasionally
       const filtered = events.filter((e) => e.t >= cutoff)
       if (filtered.length !== events.length) {
         setEvents(filtered)
@@ -155,8 +214,7 @@ export function useRecentEvents(
 
     setEvents(merged)
     saveEvents(merged)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, records, maxEvents, retentionMs])
+  }, [nodes, records, maxEvents, retentionMs, t, events])
 
   return events
 }

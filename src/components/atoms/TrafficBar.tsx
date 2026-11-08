@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { formatBytes } from '@/utils/format'
 import { formatTrafficPercent, trafficColor, type TrafficQuota } from '@/utils/traffic'
+import { useI18n } from '@/i18n'
 
 /**
  * TrafficBar — usage against Komari's per-node traffic threshold.
@@ -8,14 +9,13 @@ import { formatTrafficPercent, trafficColor, type TrafficQuota } from '@/utils/t
  * Rendered only when a threshold is configured; the caller passes undefined
  * otherwise and nothing appears (matching Komari's "0 = disabled" contract).
  *
- * The percent label sits centred on the track. When the fill is a sliver the
- * label would land on the dark trough, so it stays a light grey; once the
- * fill grows past the label it is knocked out against the colored bar
- * instead. That keeps it legible at 0.04% and at 96% alike.
+ * Displays the cycle limit, current consumption, accounting mode (sum / max),
+ * and the authoritative monthly reset schedule + remaining countdown.
  */
 type Variant = 'grid' | 'compact'
 
 function TrafficBar_({ quota, variant = 'grid' }: { quota: TrafficQuota; variant?: Variant }) {
+  const { t } = useI18n()
   const compact = variant === 'compact'
   const color = trafficColor(quota.level)
   const pctText = formatTrafficPercent(quota.percent)
@@ -29,11 +29,73 @@ function TrafficBar_({ quota, variant = 'grid' }: { quota: TrafficQuota; variant
   const height = compact ? 11 : 13
   const fontSize = compact ? 8 : 9
 
+  const tooltipText = quota.reset?.tooltip || `${t('traffic.threshold')}: ${usedText} / ${limitText}`
+
   return (
-    <div>
-      {!compact && (
+    <div title={tooltipText}>
+      {compact ? (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            justifyContent: 'space-between',
+            marginBottom: 3,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span
+              style={{
+                fontSize: 9,
+                color: 'var(--fg-3)',
+                letterSpacing: '0.08em',
+                fontFamily: 'var(--font-mono)',
+              }}
+            >
+              TRAFFIC
+            </span>
+            <span
+              style={{
+                fontSize: 8,
+                color: 'var(--fg-3)',
+                border: '0.5px solid var(--bg-4)',
+                borderRadius: 2,
+                padding: '0 3px',
+              }}
+            >
+              {quota.mode === 'sum' ? t('traffic.sum') : t('traffic.max')}
+            </span>
+            {quota.reset?.badgeText && (
+              <span
+                style={{
+                  fontSize: 8,
+                  color: 'var(--accent-bright)',
+                  border: '0.5px solid var(--bg-4)',
+                  borderRadius: 2,
+                  padding: '0 3px',
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
+                ⟳ {quota.reset.badgeText}
+              </span>
+            )}
+          </div>
+          <span
+            style={{
+              fontSize: 9.5,
+              color: 'var(--fg-2)',
+              fontFamily: 'var(--font-mono)',
+            }}
+          >
+            {usedText}
+            <span style={{ color: 'var(--fg-3)' }}> / </span>
+            {limitText}
+          </span>
+        </div>
+      ) : (
         <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: 5 }}>
-          <span style={{ fontSize: 9, color: 'var(--fg-3)', letterSpacing: '0.1em' }}>流量阈值</span>
+          <span style={{ fontSize: 9, color: 'var(--fg-3)', letterSpacing: '0.1em' }}>
+            {t('traffic.threshold')}
+          </span>
           <span
             style={{
               fontSize: 8,
@@ -44,9 +106,31 @@ function TrafficBar_({ quota, variant = 'grid' }: { quota: TrafficQuota; variant
               padding: '0 3px',
             }}
           >
-            {quota.mode === 'sum' ? '求和' : '取最大'}
+            {quota.mode === 'sum' ? t('traffic.sum') : t('traffic.max')}
           </span>
-          <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--fg-2)' }}>
+          {quota.reset?.badgeText && (
+            <span
+              style={{
+                fontSize: 8,
+                color: 'var(--accent-bright)',
+                marginLeft: 5,
+                border: '0.5px solid var(--bg-4)',
+                borderRadius: 2,
+                padding: '0 3px',
+                fontFamily: 'var(--font-mono)',
+              }}
+            >
+              ⟳ {quota.reset.badgeText}
+            </span>
+          )}
+          <span
+            style={{
+              marginLeft: 'auto',
+              fontSize: 10,
+              color: 'var(--fg-2)',
+              fontFamily: 'var(--font-mono)',
+            }}
+          >
             {usedText}
             <span style={{ color: 'var(--fg-3)' }}> / </span>
             {limitText}
@@ -92,6 +176,31 @@ function TrafficBar_({ quota, variant = 'grid' }: { quota: TrafficQuota; variant
           {compact ? `${pctText} · ${usedText} / ${limitText}` : `${pctText} USED`}
         </div>
       </div>
+
+      {!compact && quota.reset && (quota.reset.scheduleText || quota.reset.remainingText) && (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginTop: 4,
+            fontSize: 8.5,
+            fontFamily: 'var(--font-mono)',
+            color: 'var(--fg-3)',
+          }}
+        >
+          <span>
+            {quota.reset.scheduleText
+              ? `${t('traffic.reset_cycle')}: ${quota.reset.scheduleText}`
+              : t('traffic.threshold')}
+          </span>
+          {quota.reset.remainingText && (
+            <span style={{ color: 'var(--accent-bright)' }}>
+              {t('traffic.remaining', { t: quota.reset.remainingText })}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   )
 }

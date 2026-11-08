@@ -26,6 +26,7 @@ import { Etch } from '@/components/atoms/Etch'
 import { SerialPlate } from '@/components/atoms/SerialPlate'
 import { contentFs } from '@/utils/fontScale'
 import { PanelFooterLink } from './PanelFooterLink'
+import { useI18n } from '@/i18n'
 
 type Conn = 'connecting' | 'open' | 'closed' | 'error' | 'idle'
 type Health = 'healthy' | 'degraded' | 'down'
@@ -76,10 +77,12 @@ export function SystemHealthPanel({
   lastUpdate,
   recordCount,
   ping,
-  title = 'SYSTEM HEALTH',
+  title,
   serial = 'SH01',
   footerLink,
 }: Props) {
+  const { t } = useI18n()
+  const displayTitle = title ?? t('panel.system_health')
   const [now, setNow] = useState(Date.now())
 
   // Tick every 5s to refresh staleness checks
@@ -145,7 +148,7 @@ export function SystemHealthPanel({
           marginBottom: 10,
         }}
       >
-        <Etch>{title}</Etch>
+        <Etch>{displayTitle}</Etch>
         <SerialPlate>{serial}</SerialPlate>
       </div>
 

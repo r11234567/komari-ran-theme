@@ -16,6 +16,7 @@ import type { EventKind, NodeEvent } from '@/hooks/v2'
 import { Etch } from '@/components/atoms/Etch'
 import { contentFs } from '@/utils/fontScale'
 import { PanelFooterLink } from './PanelFooterLink'
+import { useI18n } from '@/i18n'
 
 interface Props {
   events: NodeEvent[]
@@ -35,23 +36,26 @@ const KIND_DOT_COLOR: Record<EventKind, string> = {
   recovered: 'var(--signal-good)',
 }
 
-function fmtAgo(t: number): string {
+function fmtAgo(t: number, tr?: (k: string, p?: Record<string, string | number>) => string): string {
   const dt = Date.now() - t
-  if (dt < 60_000) return 'just now'
+  if (dt < 60_000) return tr ? tr('time.just_now') : 'just now'
   const m = Math.floor(dt / 60_000)
-  if (m < 60) return `${m}m ago`
+  if (m < 60) return tr ? tr('time.minutes_ago', { m }) : `${m}m ago`
   const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
-  return `${Math.floor(h / 24)}d ago`
+  if (h < 24) return tr ? tr('time.hours_ago', { h }) : `${h}h ago`
+  const d = Math.floor(h / 24)
+  return tr ? tr('time.days_ago', { d }) : `${d}d ago`
 }
 
 export function RecentEventsPanel({
   events,
-  title = 'RECENT EVENTS',
+  title,
   onEventClick,
   footerLink,
   limit = 5,
 }: Props) {
+  const { t } = useI18n()
+  const displayTitle = title ?? t('panel.recent_incidents')
   const visible = events.slice(0, limit)
 
   return (
@@ -72,7 +76,7 @@ export function RecentEventsPanel({
           marginBottom: 10,
         }}
       >
-        <Etch>{title}</Etch>
+        <Etch>{displayTitle}</Etch>
       </div>
 
       {visible.length === 0 ? (
@@ -155,7 +159,7 @@ export function RecentEventsPanel({
                   whiteSpace: 'nowrap',
                 }}
               >
-                {fmtAgo(e.t)}
+                {fmtAgo(e.t, t)}
               </span>
             </div>
           ))}

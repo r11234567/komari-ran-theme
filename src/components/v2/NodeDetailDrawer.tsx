@@ -29,6 +29,8 @@ import { contentFs } from '@/utils/fontScale'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { formatBytes, formatBps, resolveRamPercent, daysUntil } from '@/utils/format'
 import { hashFor, navigate } from '@/router/route'
+import { TrafficBar } from '@/components/atoms/TrafficBar'
+import { computeTrafficQuota } from '@/utils/traffic'
 
 interface Props {
   node: KomariNode | null
@@ -245,6 +247,8 @@ export function NodeDetailDrawer({ node, record, onClose }: Props) {
     ?? (node as { ip?: string }).ip
     ?? ''
 
+  const quota = computeTrafficQuota(node, record)
+
   const width = isMobile ? '90vw' : 380
 
   return (
@@ -456,6 +460,12 @@ export function NodeDetailDrawer({ node, record, onClose }: Props) {
               }
             />
           </div>
+
+          {quota && (
+            <div style={{ paddingTop: 6, borderTop: '1px solid var(--edge-engrave)' }}>
+              <TrafficBar quota={quota} variant="grid" />
+            </div>
+          )}
 
           {/* Network */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

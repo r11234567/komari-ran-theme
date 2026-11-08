@@ -24,7 +24,7 @@ export type {
 export { useHealthTrend } from './useHealthTrend'
 export type { TrendPoint, UseHealthTrendOptions } from './useHealthTrend'
 
-export { useRecentEvents } from './useRecentEvents'
+export { useRecentEvents, clearEvents } from './useRecentEvents'
 export type { NodeEvent, EventKind, UseRecentEventsOptions } from './useRecentEvents'
 
 export { useRegionDistribution } from './useRegionDistribution'
@@ -34,6 +34,7 @@ export { useAlertSummary } from './useAlertSummary'
 export type {
   AlertItem,
   AlertLevel,
+  AlertMetric,
   AlertSummary,
   UseAlertSummaryOptions,
 } from './useAlertSummary'

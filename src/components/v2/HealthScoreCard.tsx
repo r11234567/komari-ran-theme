@@ -23,6 +23,7 @@ import type { ClusterHealth } from '@/hooks/v2'
 import { Etch } from '@/components/atoms/Etch'
 import { SerialPlate } from '@/components/atoms/SerialPlate'
 import { contentFs } from '@/utils/fontScale'
+import { useI18n } from '@/i18n'
 
 interface Props {
   health: ClusterHealth
@@ -51,6 +52,7 @@ export function HealthScoreCard({
   yesterdayScore,
   serial = 'H01',
 }: Props) {
+  const { t } = useI18n()
   const color = GRADE_COLOR[health.grade]
   const delta =
     typeof yesterdayScore === 'number' ? health.score - yesterdayScore : undefined
@@ -73,7 +75,7 @@ export function HealthScoreCard({
           alignItems: 'center',
         }}
       >
-        <Etch>CLUSTER HEALTH SCORE</Etch>
+        <Etch>{t('card.health_score')}</Etch>
         <SerialPlate>{serial}</SerialPlate>
       </div>
 

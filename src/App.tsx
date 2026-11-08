@@ -19,6 +19,7 @@ import { useRoute } from '@/router/route'
 import { applyFontScale, parseFontScale } from '@/utils/fontScale'
 import { applyUiScale, parseUiScale } from '@/utils/uiScale'
 import { setBpsUnitMode, parseBpsUnitMode } from '@/utils/format'
+import { I18nProvider } from '@/i18n'
 
 const THEME_KEY = 'ran.theme'
 /** Set to '1' when the user has explicitly picked a theme via the ThemePicker. */
@@ -61,7 +62,7 @@ if (
   )
 }
 
-export default function App() {
+function AppInner() {
   const [theme, setTheme] = useState<Theme>(loadTheme)
   const handleThemeChange = (t: Theme) => {
     try { localStorage.setItem(THEME_USER_SET_KEY, '1') } catch { /* ignore */ }
@@ -124,7 +125,10 @@ export default function App() {
   // page to "Node not found" before the WS data lands, causing flicker on refresh.
   const isDevPreview =
     typeof window !== 'undefined' &&
-    (window.location.protocol === 'file:' || window.location.origin === 'null')
+    (window.location.protocol === 'file:' ||
+      window.location.origin === 'null' ||
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1')
   const useMockFallback = isDevPreview && nodes.length === 0
   const displayNodes = useMockFallback ? MOCK_NODES : nodes
   const displayRecords = useMockFallback ? MOCK_RECORDS : records
@@ -468,5 +472,13 @@ export default function App() {
       viewVersion={viewVersion}
       onViewVersionChange={setViewVersion}
     />
+  )
+}
+
+export default function App() {
+  return (
+    <I18nProvider>
+      <AppInner />
+    </I18nProvider>
   )
 }

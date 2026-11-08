@@ -1,0 +1,118 @@
+import type { TranslationDict } from '../types'
+
+export const zhTW: TranslationDict = {
+  // Common
+  'lang.label': '語言',
+  'lang.name': '繁體中文',
+  'theme.night': '墨石',
+  'theme.mist': '霧色',
+  'layout.label': '佈局',
+  'search.placeholder': '搜尋節點...',
+  'search.no_match': '未找到符合節點',
+
+  // Navigation
+  'nav.overview': '概覽',
+  'nav.nodes': '節點',
+  'nav.traffic': '全網流量',
+  'nav.billing': '訂閱帳單',
+  'nav.hub': '駕駛艙',
+  'nav.geo_map': '全球地圖',
+
+  // Status & Time
+  'status.live': '即時',
+  'status.online': '在線',
+  'status.offline': '離線',
+  'status.degraded': '降級',
+  'status.regions': '地區',
+  'status.alerts': '告警',
+  'status.avg_lat': '平均延遲',
+  'status.sync': '同步',
+  'time.just_now': '剛剛',
+  'time.seconds_ago': '{s}秒前',
+  'time.minutes_ago': '{m}分鐘前',
+  'time.hours_ago': '{h}小時前',
+  'time.days_ago': '{d}天前',
+
+  // V2 Cards
+  'card.health_score': '集群健康分',
+  'card.active_alerts': '活動告警',
+  'card.global_throughput': '全網即時吞吐',
+  'card.avg_packet_loss': '平均丟包率',
+  'card.expiring_soon': '臨期節點',
+
+  // V2 Panels
+  'panel.region_donut': '區域節點分佈',
+  'panel.alert_summary': '告警摘要',
+  'panel.recent_incidents': '近期故障與事件',
+  'panel.recent_events': '近期事件流',
+  'panel.health_trend': '健康度趨勢 (7D)',
+  'panel.attention_needed': '需關注節點 TOP 5',
+  'panel.system_health': '系統連通性與服務狀態',
+  'panel.loss_heatmap': '全網丟包熱力圖',
+
+  // Buttons & Actions
+  'btn.view_alerts': '查看告警',
+  'btn.view_all_alerts': '查看全部告警',
+  'btn.view_all_incidents': '查看全部事件',
+  'btn.view_all_services': '查看服務詳情',
+  'btn.view_all_nodes': '查看全部節點',
+  'btn.close': '關閉',
+  'btn.clear_history': '清空本地記錄',
+
+  // Alert Levels
+  'level.all': '全部',
+  'level.critical': '嚴重',
+  'level.warning': '警告',
+  'level.info': '提示',
+
+  // Alert & Event Messages
+  'alert.node_offline': '節點離線',
+  'alert.node_recovered': '節點恢復在線',
+  'alert.high_loss': '高丟包率',
+  'alert.mod_loss': '丟包率偏高',
+  'alert.high_ping': '高延遲',
+  'alert.mod_ping': '延遲升高',
+  'alert.high_cpu': 'CPU 使用率高',
+  'alert.high_mem': '內存接近滿載',
+  'alert.high_disk': '磁碟空間不足',
+  'alert.high_load': '負載偏高',
+  'alert.traffic_warning': '流量配額接近上限',
+  'alert.traffic_exhausted': '流量配額已耗盡',
+  'alert.expiring_soon': '即將到期',
+  'alert.expired': '節點已過期',
+  'alert.stale_heartbeat': '心跳超時未上報',
+  'alert.days_ago_expired': '已過期 {d} 天',
+  'alert.enter_degraded': '節點進入降級',
+  'alert.recover_normal': '節點恢復正常',
+  'unit.days': '天',
+
+  // Modals
+  'modal.alerts.title': '活動告警監控中心',
+  'modal.alerts.subtitle': '即時集群異常與告警事件追蹤',
+  'modal.alerts.empty': '當前集群運行良好，無活動告警',
+  'modal.incidents.title': '系統突發事件歷史',
+  'modal.incidents.subtitle': '記錄節點狀態轉換、斷線與恢復軌跡',
+  'modal.incidents.empty': '暫無事件記錄，節點發生狀態流轉時將在此呈現',
+  'modal.services.title': '系統連通性與服務健康',
+  'modal.services.subtitle': 'Connect gRPC 即時數據通道與探針服務概覽',
+
+  // Metrics
+  'metric.cpu': 'CPU',
+  'metric.memory': '內存',
+  'metric.disk': '磁碟',
+  'metric.network': '網路',
+  'metric.load': '負載',
+  'metric.latency': '延遲',
+  'metric.loss': '丟包',
+  'metric.uptime': '運行時間',
+  'metric.connections': '連接數',
+
+  // Traffic & Quota
+  'traffic.threshold': '流量閾值',
+  'traffic.sum': '求和',
+  'traffic.max': '取最大',
+  'traffic.reset_cycle': '重置週期',
+  'traffic.next_reset': '下次重置',
+  'traffic.remaining': '還有 {t}',
+  'traffic.no_reset': '不設置月度重置',
+}

@@ -48,6 +48,7 @@ import { useMobileDrawer, useIsMobile } from '@/hooks/useMediaQuery'
 import { useGlobalHistory } from '@/hooks/useGlobalHistory'
 import { buildChartWindows } from '@/utils/chartWindows'
 import { getRecordRetentionHours } from '@/utils/retention'
+import { useI18n } from '@/i18n'
 
 import {
   useAggregateStats,
@@ -57,9 +58,16 @@ import {
   useRegionDistribution,
   useHealthTrend,
   useRecentEvents,
+  clearEvents,
   useAlertHistory,
   useMetricHistory,
 } from '@/hooks/v2'
+
+import {
+  ActiveAlertsModal,
+  IncidentsHistoryModal,
+  SystemServicesModal,
+} from '@/components/v2/modals'
 
 import {
   StatusStripe,
@@ -114,6 +122,7 @@ export function OverviewV2Page({
   viewVersion,
   onViewVersionChange,
 }: Props) {
+  const { t } = useI18n()
   // ── Data layer ──
   const stats = useAggregateStats(nodes, records, { expiringWithinDays: 30 })
   const health = useClusterHealth(stats)
@@ -124,6 +133,11 @@ export function OverviewV2Page({
   const events = useRecentEvents(nodes, records)
   const drawer = useMobileDrawer()
   const isMobile = useIsMobile()
+
+  // Modal dialog states
+  const [alertsModalOpen, setAlertsModalOpen] = useState(false)
+  const [incidentsModalOpen, setIncidentsModalOpen] = useState(false)
+  const [servicesModalOpen, setServicesModalOpen] = useState(false)
 
   const uuids = useMemo(() => nodes.map((n) => n.uuid), [nodes])
 
@@ -294,6 +308,7 @@ export function OverviewV2Page({
             <ActiveAlertsCard
               summary={alertSummary}
               volumeSeries={alertVolumeSeries}
+              onViewAlerts={() => setAlertsModalOpen(true)}
             />
             <ThroughputSummaryCard
               totalBytes={stats.totalNetUp + stats.totalNetDown}
@@ -342,13 +357,19 @@ export function OverviewV2Page({
             <AlertSummaryPanel
               summary={alertSummary}
               onAlertClick={(uuid) => setDrawerUuid(uuid)}
-              footerLink={{ label: 'View All Alerts', href: '#/v2/overview' }}
+              footerLink={{
+                label: t('btn.view_all_alerts'),
+                onClick: () => setAlertsModalOpen(true),
+              }}
             />
             <RecentEventsPanel
               events={events}
-              title="RECENT INCIDENTS"
+              title={t('panel.recent_incidents')}
               onEventClick={(uuid) => setDrawerUuid(uuid)}
-              footerLink={{ label: 'View All Incidents', href: '#/v2/overview' }}
+              footerLink={{
+                label: t('btn.view_all_incidents'),
+                onClick: () => setIncidentsModalOpen(true),
+              }}
             />
             <HealthTrend7DChart points={trend} currentScore={health.score} />
           </div>
@@ -366,14 +387,17 @@ export function OverviewV2Page({
             <AttentionNeededTable
               items={attention}
               onNodeClick={(uuid) => setDrawerUuid(uuid)}
-              footerLink={{ label: 'View All Nodes', href: '#/v2/nodes' }}
+              footerLink={{ label: t('btn.view_all_nodes'), href: '#/v2/nodes' }}
             />
             <SystemHealthPanel
               conn={conn}
               lastUpdate={lastUpdate}
               recordCount={Object.keys(records).length}
               ping={ping}
-              footerLink={{ label: 'View All Services', href: '#/v2/overview' }}
+              footerLink={{
+                label: t('btn.view_all_services'),
+                onClick: () => setServicesModalOpen(true),
+              }}
             />
             <NetworkLossHeatmap nodes={nodes} records={records} />
           </div>
@@ -385,6 +409,31 @@ export function OverviewV2Page({
         node={drawerNode}
         record={drawerRecord}
         onClose={() => setDrawerUuid(null)}
+      />
+
+      <ActiveAlertsModal
+        open={alertsModalOpen}
+        onClose={() => setAlertsModalOpen(false)}
+        summary={alertSummary}
+        onSelectNode={(uuid) => setDrawerUuid(uuid)}
+      />
+
+      <IncidentsHistoryModal
+        open={incidentsModalOpen}
+        onClose={() => setIncidentsModalOpen(false)}
+        events={events}
+        onClearEvents={clearEvents}
+        onSelectNode={(uuid) => setDrawerUuid(uuid)}
+      />
+
+      <SystemServicesModal
+        open={servicesModalOpen}
+        onClose={() => setServicesModalOpen(false)}
+        conn={conn}
+        lastUpdate={lastUpdate}
+        recordCount={Object.keys(records).length}
+        totalNodes={nodes.length}
+        ping={ping}
       />
 
       {/* 访客信息浮卡 — 同 v1 Overview 行为:本会话首次访问右下角浮出,

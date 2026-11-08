@@ -20,6 +20,7 @@ import { SerialPlate } from '@/components/atoms/SerialPlate'
 import { contentFs } from '@/utils/fontScale'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { PanelFooterLink } from './PanelFooterLink'
+import { useI18n } from '@/i18n'
 
 interface Props {
   items: AttentionItem[]
@@ -75,11 +76,13 @@ function fmtTime(iso?: string): string {
 
 export function AttentionNeededTable({
   items,
-  title = 'ATTENTION NEEDED · TOP 5 NODES',
+  title,
   serial = 'A01',
   onNodeClick,
   footerLink,
 }: Props) {
+  const { t } = useI18n()
+  const displayTitle = title ?? t('panel.attention_needed')
   const isMobile = useIsMobile()
 
   return (
@@ -100,7 +103,7 @@ export function AttentionNeededTable({
           marginBottom: 10,
         }}
       >
-        <Etch>{title}</Etch>
+        <Etch>{displayTitle}</Etch>
         <SerialPlate>{serial}</SerialPlate>
       </div>
 

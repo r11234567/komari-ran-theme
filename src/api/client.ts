@@ -42,6 +42,7 @@ const latestDisk = (report?: AgentReport) => report?.disks.find((item) => item.m
 
 export function nodeFromSummary(summary: Awaited<ReturnType<typeof browser.listAgents>>['agents'][number]): KomariNode {
   const basic = summary.basicInfo
+  const accounting = summary.trafficAccounting
   return {
     uuid: summary.agentId, name: summary.name, os: basic?.os, cpu_name: basic?.cpuName,
     cpu_cores: basic?.cpuCores, arch: basic?.architecture, region: basic?.region, group: basic?.group,
@@ -49,6 +50,10 @@ export function nodeFromSummary(summary: Awaited<ReturnType<typeof browser.listA
     price: basic?.price, billing_cycle: basic?.billingCycleDays, currency: basic?.currency,
     traffic_limit: asNumber(basic?.trafficLimitBytes), traffic_limit_type: basic?.trafficLimitType,
     weight: basic?.weight,
+    traffic_reset_day: accounting?.resetDay ?? undefined,
+    traffic_reset_time: accounting?.resetTime || undefined,
+    traffic_reset_timezone: accounting?.resetTimezone || undefined,
+    traffic_next_reset: accounting?.nextReset ? timestampDate(accounting.nextReset).toISOString() : undefined,
   }
 }
 

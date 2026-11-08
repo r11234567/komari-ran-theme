@@ -22,6 +22,8 @@ import type { KomariNode, KomariRecord } from '@/types/komari'
 import { Etch } from '@/components/atoms/Etch'
 import { contentFs } from '@/utils/fontScale'
 import { ReadoutGrid } from '@/components/atoms/ReadoutGrid'
+import { TrafficBar } from '@/components/atoms/TrafficBar'
+import { computeTrafficQuota } from '@/utils/traffic'
 import {
   daysUntil,
   formatBps,
@@ -264,6 +266,7 @@ export function NodeDetailSidePanel({ node, record, width = 300 }: Props) {
       : 'var(--fg-3)'
 
   const ip = (node as { ipv4?: string; ipv6?: string }).ipv4 ?? (node as { ip?: string }).ip ?? ''
+  const quota = computeTrafficQuota(node, record)
 
   return (
     <aside
@@ -443,6 +446,12 @@ export function NodeDetailSidePanel({ node, record, width = 300 }: Props) {
             }
           />
         </div>
+
+        {quota && (
+          <div style={{ paddingTop: 6, borderTop: '1px solid var(--edge-engrave)' }}>
+            <TrafficBar quota={quota} variant="grid" />
+          </div>
+        )}
 
         {/* One 2x2 cluster instead of two loose grids — the four figures a
             reader actually scans together, framed together. */}

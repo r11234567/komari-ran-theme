@@ -1,0 +1,118 @@
+import type { TranslationDict } from '../types'
+
+export const en: TranslationDict = {
+  // Common
+  'lang.label': 'LANGUAGE',
+  'lang.name': 'English',
+  'theme.night': 'NIGHT',
+  'theme.mist': 'MIST',
+  'layout.label': 'LAYOUT',
+  'search.placeholder': 'SEARCH NODES...',
+  'search.no_match': 'No matching nodes found',
+
+  // Navigation
+  'nav.overview': 'OVERVIEW',
+  'nav.nodes': 'NODES',
+  'nav.traffic': 'TRAFFIC',
+  'nav.billing': 'BILLING',
+  'nav.hub': 'COCKPIT',
+  'nav.geo_map': 'GEO MAP',
+
+  // Status & Time
+  'status.live': 'LIVE',
+  'status.online': 'ONLINE',
+  'status.offline': 'OFFLINE',
+  'status.degraded': 'DEGRADED',
+  'status.regions': 'REGIONS',
+  'status.alerts': 'ALERTS',
+  'status.avg_lat': 'AVG LAT',
+  'status.sync': 'SYNC',
+  'time.just_now': 'just now',
+  'time.seconds_ago': '{s}s ago',
+  'time.minutes_ago': '{m}m ago',
+  'time.hours_ago': '{h}h ago',
+  'time.days_ago': '{d}d ago',
+
+  // V2 Cards
+  'card.health_score': 'HEALTH SCORE',
+  'card.active_alerts': 'ACTIVE ALERTS',
+  'card.global_throughput': 'GLOBAL THROUGHPUT',
+  'card.avg_packet_loss': 'AVG PACKET LOSS',
+  'card.expiring_soon': 'EXPIRING SOON',
+
+  // V2 Panels
+  'panel.region_donut': 'REGION DISTRIBUTION',
+  'panel.alert_summary': 'ALERT SUMMARY',
+  'panel.recent_incidents': 'RECENT INCIDENTS',
+  'panel.recent_events': 'RECENT EVENTS',
+  'panel.health_trend': 'HEALTH TREND (7D)',
+  'panel.attention_needed': 'ATTENTION TOP 5 NEEDED',
+  'panel.system_health': 'SYSTEM HEALTH',
+  'panel.loss_heatmap': 'NETWORK LOSS HEATMAP',
+
+  // Buttons & Actions
+  'btn.view_alerts': 'VIEW ALERTS',
+  'btn.view_all_alerts': 'View All Alerts',
+  'btn.view_all_incidents': 'View All Incidents',
+  'btn.view_all_services': 'View All Services',
+  'btn.view_all_nodes': 'View All Nodes',
+  'btn.close': 'Close',
+  'btn.clear_history': 'Clear History',
+
+  // Alert Levels
+  'level.all': 'ALL',
+  'level.critical': 'CRITICAL',
+  'level.warning': 'WARNING',
+  'level.info': 'INFO',
+
+  // Alert & Event Messages
+  'alert.node_offline': 'Node Offline',
+  'alert.node_recovered': 'Node Recovered Online',
+  'alert.high_loss': 'High Packet Loss',
+  'alert.mod_loss': 'Elevated Packet Loss',
+  'alert.high_ping': 'High Latency',
+  'alert.mod_ping': 'Elevated Latency',
+  'alert.high_cpu': 'High CPU Utilization',
+  'alert.high_mem': 'Near Memory Capacity',
+  'alert.high_disk': 'Low Disk Space',
+  'alert.high_load': 'Elevated System Load',
+  'alert.traffic_warning': 'Traffic Quota Approaching Limit',
+  'alert.traffic_exhausted': 'Traffic Quota Exhausted',
+  'alert.expiring_soon': 'Expiring Soon',
+  'alert.expired': 'Service Expired',
+  'alert.stale_heartbeat': 'Heartbeat Timeout',
+  'alert.days_ago_expired': 'expired {d}d ago',
+  'alert.enter_degraded': 'Node Entered Degraded State',
+  'alert.recover_normal': 'Node Recovered Normal State',
+  'unit.days': 'days',
+
+  // Modals
+  'modal.alerts.title': 'Active Alerts Center',
+  'modal.alerts.subtitle': 'Real-time cluster anomaly detection & incident tracking',
+  'modal.alerts.empty': 'All nodes operating nominally. No active alerts.',
+  'modal.incidents.title': 'System Incidents & Events History',
+  'modal.incidents.subtitle': 'Chronological log of node state transitions and outages',
+  'modal.incidents.empty': 'No incidents recorded yet. State changes will appear here.',
+  'modal.services.title': 'System Connectivity & Health',
+  'modal.services.subtitle': 'Connect gRPC streaming telemetry & latency probe status',
+
+  // Metrics
+  'metric.cpu': 'CPU',
+  'metric.memory': 'RAM',
+  'metric.disk': 'DISK',
+  'metric.network': 'NET',
+  'metric.load': 'LOAD',
+  'metric.latency': 'LATENCY',
+  'metric.loss': 'LOSS',
+  'metric.uptime': 'UPTIME',
+  'metric.connections': 'CONNS',
+
+  // Traffic & Quota
+  'traffic.threshold': 'TRAFFIC LIMIT',
+  'traffic.sum': 'SUM',
+  'traffic.max': 'MAX',
+  'traffic.reset_cycle': 'Reset Cycle',
+  'traffic.next_reset': 'Next Reset',
+  'traffic.remaining': 'in {t}',
+  'traffic.no_reset': 'No monthly reset',
+}
