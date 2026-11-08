@@ -21,6 +21,7 @@ import { TimeWindowSwitcher, type TimeWindowOption } from './TimeWindowSwitcher'
 import { contentFs } from '@/utils/fontScale'
 import { formatBytes, formatBps } from '@/utils/format'
 import { useIsMobile } from '@/hooks/useMediaQuery'
+import { useI18n } from '@/i18n'
 
 export type ThroughputView = 'in' | 'out' | 'both'
 
@@ -96,12 +97,14 @@ export function GlobalThroughput24hChart({
   totalIn,
   totalOut,
   windowLabel = 'Last 24h',
-  title = 'GLOBAL THROUGHPUT',
+  title,
   serial = 'T01',
   timeWindow,
   onTimeWindowChange,
   timeWindowOptions,
 }: Props) {
+  const { t } = useI18n()
+  const displayTitle = title ?? t('card.global_throughput') ?? 'GLOBAL THROUGHPUT'
   const [view, setView] = useState<ThroughputView>('both')
   const isMobile = useIsMobile()
 
@@ -137,7 +140,7 @@ export function GlobalThroughput24hChart({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <Etch>{title} (IN / OUT)</Etch>
+          <Etch>{displayTitle} (IN / OUT)</Etch>
           <SerialPlate>{serial}</SerialPlate>
           <span
             style={{

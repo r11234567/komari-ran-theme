@@ -97,7 +97,22 @@ function PingChart_({
       let bestY = pad.top + innerH
       let bestV = 0
       for (let si = 0; si < series.length; si++) {
-        const v = series[si].data[idx]
+        let v = series[si].data[idx]
+        // If exact index is empty due to sparse probe intervals, check adjacent buckets
+        if (!isFinitePoint(v)) {
+          for (let d = 1; d <= 4; d++) {
+            const left = series[si].data[idx - d]
+            if (isFinitePoint(left)) {
+              v = left
+              break
+            }
+            const right = series[si].data[idx + d]
+            if (isFinitePoint(right)) {
+              v = right
+              break
+            }
+          }
+        }
         if (!isFinitePoint(v)) continue
         const y =
           pad.top + innerH - (Math.min(computedYMax, v) / computedYMax) * innerH
@@ -198,37 +213,44 @@ function PingChart_({
         {/* series */}
         {series.map((s, si) => {
           const c = COLORS[si % COLORS.length]
-          const points = s.data.map((value, index) =>
-            isFinitePoint(value)
-              ? ([
-                  pad.left + index * stepX,
-                  pad.top +
-                    innerH -
-                    (Math.min(computedYMax, value) / computedYMax) * innerH,
-                ] as [number, number])
-              : null,
-          )
-          let drawing = false
-          let path = ''
-          let last: [number, number] | null = null
-          for (const point of points) {
-            if (!point) continue
-            path += `${drawing ? 'L' : 'M'}${point[0]},${point[1]} `
-            drawing = true
-            last = point
+          const validPoints: [number, number][] = []
+          for (let index = 0; index < s.data.length; index++) {
+            const value = s.data[index]
+            if (isFinitePoint(value)) {
+              validPoints.push([
+                pad.left + index * stepX,
+                pad.top + innerH - (Math.min(computedYMax, value) / computedYMax) * innerH,
+              ])
+            }
           }
-          if (!last) return null
+          if (validPoints.length === 0) return null
+
+          let path = ''
+          for (let i = 0; i < validPoints.length; i++) {
+            const pt = validPoints[i]
+            path += `${i === 0 ? 'M' : 'L'}${pt[0]},${pt[1]} `
+          }
+
+          const last = validPoints[validPoints.length - 1]
+          const showAllDots = validPoints.length <= 15
+
           return (
             <g key={`s${si}`}>
-              <path
-                d={path}
-                stroke={c}
-                strokeWidth={1.3}
-                fill="none"
-                strokeLinejoin="round"
-                opacity={0.85}
-              />
-              <circle cx={last[0]} cy={last[1]} r={2} fill={c} />
+              {validPoints.length > 1 && (
+                <path
+                  d={path}
+                  stroke={c}
+                  strokeWidth={1.3}
+                  fill="none"
+                  strokeLinejoin="round"
+                  opacity={0.85}
+                />
+              )}
+              {showAllDots
+                ? validPoints.map((pt, pi) => (
+                    <circle key={pi} cx={pt[0]} cy={pt[1]} r={2} fill={c} opacity={0.9} />
+                  ))
+                : <circle cx={last[0]} cy={last[1]} r={2} fill={c} />}
             </g>
           )
         })}

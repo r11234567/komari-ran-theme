@@ -69,12 +69,29 @@ function AreaChart_({
       if (data.length === 0 || stepX === 0) return null
       const localX = svgX - pad.left
       const idx = Math.max(0, Math.min(data.length - 1, Math.round(localX / stepX)))
-      const v = data[idx]
+      let v = data[idx]
+      let resolvedIdx = idx
+      if (!isFinitePoint(v)) {
+        for (let d = 1; d <= 4; d++) {
+          const left = data[idx - d]
+          if (isFinitePoint(left)) {
+            v = left
+            resolvedIdx = idx - d
+            break
+          }
+          const right = data[idx + d]
+          if (isFinitePoint(right)) {
+            v = right
+            resolvedIdx = idx + d
+            break
+          }
+        }
+      }
       if (!isFinitePoint(v)) return null
-      const cx = pad.left + idx * stepX
+      const cx = pad.left + resolvedIdx * stepX
       const cy =
         pad.top + innerH - ((Math.max(yMin, Math.min(yMax, v)) - yMin) / range) * innerH
-      const t = times?.[idx]
+      const t = times?.[resolvedIdx]
       return {
         cx,
         cy,
@@ -120,17 +137,22 @@ function AreaChart_({
             ((Math.max(yMin, Math.min(yMax, value)) - yMin) / range) * innerH,
         ] as [number, number]),
   )
-  let drawing = false
-  let path = ''
+  const validPts: [number, number][] = []
   for (const point of pts) {
-    if (!point) continue
-    path += `${drawing ? 'L' : 'M'}${point[0]},${point[1]} `
-    drawing = true
+    if (point) validPts.push(point)
   }
-  const allPointsPresent = pts.every((point) => point != null)
-  const fillPath = allPointsPresent
-    ? `${path} L${pad.left + innerW},${pad.top + innerH} L${pad.left},${pad.top + innerH} Z`
-    : ''
+
+  let path = ''
+  for (let i = 0; i < validPts.length; i++) {
+    const pt = validPts[i]
+    path += `${i === 0 ? 'M' : 'L'}${pt[0]},${pt[1]} `
+  }
+
+  const fillPath =
+    validPts.length > 0
+      ? `${path} L${validPts[validPts.length - 1][0]},${pad.top + innerH} L${validPts[0][0]},${pad.top + innerH} Z`
+      : ''
+
   let lastPoint: [number, number] | null = null
   for (let index = pts.length - 1; index >= 0; index--) {
     const point = pts[index]
@@ -211,13 +233,19 @@ function AreaChart_({
         </defs>
         {fillPath && <path d={fillPath} fill={`url(#${id})`} />}
         {/* line */}
-        <path
-          d={path}
-          stroke={color}
-          strokeWidth={1.4}
-          fill="none"
-          strokeLinejoin="round"
-        />
+        {validPts.length > 1 && (
+          <path
+            d={path}
+            stroke={color}
+            strokeWidth={1.4}
+            fill="none"
+            strokeLinejoin="round"
+          />
+        )}
+        {validPts.length <= 15 &&
+          validPts.map((p, idx) => (
+            <circle key={idx} cx={p[0]} cy={p[1]} r="1.8" fill={color} opacity={0.85} />
+          ))}
         {/* current dot */}
         {lastPoint && (
           <>

@@ -20,6 +20,7 @@ import { Etch } from '@/components/atoms/Etch'
 import { SerialPlate } from '@/components/atoms/SerialPlate'
 import { contentFs } from '@/utils/fontScale'
 import { useIsMobile } from '@/hooks/useMediaQuery'
+import { useI18n } from '@/i18n'
 
 interface Props {
   points: TrendPoint[]
@@ -34,10 +35,12 @@ interface Props {
 export function HealthTrend7DChart({
   points,
   currentScore,
-  title = 'HEALTH TREND (7D)',
+  title,
   serial = 'H02',
   days = 7,
 }: Props) {
+  const { t } = useI18n()
+  const displayTitle = title ?? t('panel.health_trend') ?? 'HEALTH TREND (7D)'
   const isMobile = useIsMobile()
 
   // Measure container width so the SVG viewBox matches real pixel width.
@@ -102,7 +105,7 @@ export function HealthTrend7DChart({
           marginBottom: 10,
         }}
       >
-        <Etch>{title}</Etch>
+        <Etch>{displayTitle}</Etch>
         <SerialPlate>{serial}</SerialPlate>
       </div>
 

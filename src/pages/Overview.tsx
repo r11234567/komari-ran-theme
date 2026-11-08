@@ -24,6 +24,7 @@ import { contentFs } from '@/utils/fontScale'
 import { useMobileDrawer } from '@/hooks/useMediaQuery'
 import { useSearchQuery, nodeMatchesQuery } from '@/hooks/useSearchQuery'
 import { type Theme } from '@/components/atoms/ThemePicker'
+import { useI18n } from '@/i18n'
 
 type Conn = 'connecting' | 'open' | 'closed' | 'error' | 'idle'
 type ViewMode = 'grid' | 'row'
@@ -60,6 +61,7 @@ export function OverviewPage({
   viewVersion,
   onViewVersionChange,
 }: Props) {
+  const { t } = useI18n()
   const drawer = useMobileDrawer()
   const [view, setView] = useState<ViewMode>('grid')
   const [filter, setFilter] = useState<Filter>('all')
@@ -472,7 +474,7 @@ export function OverviewPage({
             }}
           >
             <CardFrame
-              title="Active Alerts"
+              title={t('card.active_alerts') || 'Active Alerts'}
               code={`A · ${String(alerts.length).padStart(2, '0')}`}
               action={<Etch>RT</Etch>}
               inset
@@ -481,7 +483,7 @@ export function OverviewPage({
             </CardFrame>
 
             <CardFrame
-              title="测速点延迟 · 1H"
+              title={`${t('chart.latency_probes') || '测速点延迟'} · 1H`}
               code="P · 06"
               action={
                 <Etch>
@@ -506,7 +508,7 @@ export function OverviewPage({
                     lineHeight: 1.6,
                   }}
                 >
-                  尚未配置测速点
+                  {t('chart.no_ping_data') || '尚未配置测速点'}
                   <br />
                   <span style={{ fontSize: contentFs(9), color: 'var(--fg-3)', opacity: 0.7 }}>
                     add ping tasks in komari admin
@@ -515,7 +517,7 @@ export function OverviewPage({
               )}
             </CardFrame>
 
-            <CardFrame title="Traffic · 1H" code="T · 09">
+            <CardFrame title={`${t('chart.title_traffic') || 'Traffic'} · 1H`} code="T · 09">
               <BarChart
                 data={trafficSeries}
                 width={340}

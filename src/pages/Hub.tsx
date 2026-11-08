@@ -49,6 +49,8 @@ import { useElementWidth } from '@/hooks/useElementWidth'
 import { hashFor } from '@/router/route'
 import { useMobileDrawer } from '@/hooks/useMediaQuery'
 import { type Theme } from '@/components/atoms/ThemePicker'
+import { useI18n } from '@/i18n'
+import { getRecordGpu } from '@/utils/gpu'
 
 type Conn = 'connecting' | 'open' | 'closed' | 'error' | 'idle'
 
@@ -186,6 +188,16 @@ function deriveAlertsForNode(
       : 0
   if (diskPct > 90) push('bad', 'CRIT', `DISK ${diskPct.toFixed(0)}%`)
   else if (diskPct > 80) push('warn', 'WARN', `DISK ${diskPct.toFixed(0)}%`)
+
+  const gpuData = getRecordGpu(record)
+  if (gpuData?.hasGpu && gpuData.averageUsage != null) {
+    if (gpuData.averageUsage > 90) push('bad', 'CRIT', `GPU ${gpuData.averageUsage.toFixed(0)}%`)
+    else if (gpuData.averageUsage > 80) push('warn', 'WARN', `GPU ${gpuData.averageUsage.toFixed(0)}%`)
+  }
+  if (gpuData?.hasVram && gpuData.vramPercent != null) {
+    if (gpuData.vramPercent > 90) push('bad', 'CRIT', `VRAM ${gpuData.vramPercent.toFixed(0)}%`)
+    else if (gpuData.vramPercent > 80) push('warn', 'WARN', `VRAM ${gpuData.vramPercent.toFixed(0)}%`)
+  }
 
   if ((record.loss ?? 0) > 5) push('warn', 'LOSS', `丢包 ${(record.loss ?? 0).toFixed(1)}%`)
 
@@ -844,6 +856,7 @@ export function HubPage({
   config,
   hubTargetUuid,
 }: Props) {
+  const { t } = useI18n()
   const drawer = useMobileDrawer()
   // Live UTC clock for the command bar.
   const [now, setNow] = useState<number>(() => Date.now())
@@ -874,6 +887,7 @@ export function HubPage({
   const telemetry = useNodeTelemetry(uuid, windowSpec.hours)
   const node = useMemo(() => nodes.find((n) => n.uuid === uuid), [nodes, uuid])
   const record = node ? records[node.uuid] : undefined
+  const gpuData = record ? getRecordGpu(record) : null
   const online = record?.online === true
 
   const windowMs = HOURS * 60 * 60 * 1000
@@ -1247,7 +1261,7 @@ export function HubPage({
           >
             {/* ── COL 1: identity + system + allocation ── */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <CardFrame title="System Identity" code="SYS · 01">
+              <CardFrame title={t('chart.system_identity') || 'System Identity'} code="SYS · 01">
                 <div style={{ padding: '4px 12px 10px' }}>
                   <InfoRow label="Host" value={node.name ?? '—'} />
                   <InfoRow label="IPv4" value={node.ip ?? '—'} />
@@ -1266,7 +1280,7 @@ export function HubPage({
                 </div>
               </CardFrame>
 
-              <CardFrame title="Allocation" code="ALC · 02">
+              <CardFrame title={t('chart.allocation') || 'Allocation'} code="ALC · 02">
                 <div style={{ padding: '4px 12px 10px' }}>
                   <AllocationBar
                     label="Memory"
@@ -1286,7 +1300,7 @@ export function HubPage({
                 </div>
               </CardFrame>
 
-              <CardFrame title="Resources" code="RES · 03">
+              <CardFrame title={t('chart.resources') || 'Resources'} code="RES · 03">
                 <div style={{ padding: '8px 12px 10px' }}>
                   <ResourceRow
                     label="CPU"
@@ -1295,6 +1309,21 @@ export function HubPage({
                     detail={`${node.cpu_cores ?? '—'} cores`}
                     status={resStatus}
                   />
+                  {gpuData?.hasGpu && (
+                    <ResourceRow
+                      label="GPU"
+                      value={online && gpuData.averageUsage != null ? `${gpuData.averageUsage.toFixed(1)}%` : '—'}
+                      pct={online ? (gpuData.averageUsage ?? 0) : 0}
+                      detail={gpuData.primaryDevice?.name ?? `${gpuData.count} GPU`}
+                      status={
+                        (gpuData.averageUsage ?? 0) > 85
+                          ? 'bad'
+                          : (gpuData.averageUsage ?? 0) > 70
+                            ? 'warn'
+                            : 'good'
+                      }
+                    />
+                  )}
                   <ResourceRow
                     label="MEM"
                     value={online && record?.memory_total ? `${memPct.toFixed(1)}%` : '—'}
@@ -1306,6 +1335,25 @@ export function HubPage({
                     }
                     status={memPct > 85 ? 'bad' : memPct > 65 ? 'warn' : 'good'}
                   />
+                  {gpuData?.hasVram && (
+                    <ResourceRow
+                      label="VRAM"
+                      value={online && gpuData.vramPercent != null ? `${gpuData.vramPercent.toFixed(1)}%` : '—'}
+                      pct={online ? (gpuData.vramPercent ?? 0) : 0}
+                      detail={
+                        online && gpuData.totalMemUsed != null && gpuData.totalMemTotal
+                          ? `${formatBytes(gpuData.totalMemUsed, 1)} / ${formatBytes(gpuData.totalMemTotal, 1)}`
+                          : ''
+                      }
+                      status={
+                        (gpuData.vramPercent ?? 0) > 85
+                          ? 'bad'
+                          : (gpuData.vramPercent ?? 0) > 70
+                            ? 'warn'
+                            : 'good'
+                      }
+                    />
+                  )}
                   <ResourceRow
                     label="DISK"
                     value={online && record?.disk_total ? `${diskPct.toFixed(1)}%` : '—'}
@@ -1369,7 +1417,7 @@ export function HubPage({
                 }}
               >
                 <CardFrame
-                  title={`CPU · ${windowSpec.label}`}
+                  title={`${t('chart.title_cpu')} · ${windowSpec.label}`}
                   code="C · 04"
                   action={
                     <span
@@ -1398,7 +1446,7 @@ export function HubPage({
                   </div>
                 </CardFrame>
                 <CardFrame
-                  title={`Memory · ${windowSpec.label}`}
+                  title={`${t('chart.title_memory')} · ${windowSpec.label}`}
                   code="C · 05"
                   action={
                     <span
@@ -1426,7 +1474,7 @@ export function HubPage({
                   </div>
                 </CardFrame>
                 <CardFrame
-                  title={`Net · ${windowSpec.label}`}
+                  title={`${t('chart.title_network')} · ${windowSpec.label}`}
                   code="C · 06"
                   action={
                     online ? (
@@ -1457,7 +1505,7 @@ export function HubPage({
                   </div>
                 </CardFrame>
                 <CardFrame
-                  title={`Latency · ${windowSpec.label}`}
+                  title={`${t('chart.title_latency')} · ${windowSpec.label}`}
                   code="C · 07"
                   action={
                     online && record?.ping != null ? (
@@ -1491,7 +1539,7 @@ export function HubPage({
                           letterSpacing: '0.16em',
                         }}
                       >
-                        NO PING DATA
+                        {t('chart.no_ping_data') || 'NO PING DATA'}
                       </div>
                     )}
                   </div>
@@ -1502,7 +1550,7 @@ export function HubPage({
                   这样 index.html 完全不背地图代码体积,真地图直接走外置入口。
                   iframe 上盖一个透明 <a>,把整块卡片变成跳转入口(也防止 iframe
                   内部 React 抢点击)。 */}
-              <CardFrame title="Geographic Position" code="GEO · 08">
+              <CardFrame title={t('chart.geo_position') || 'Geographic Position'} code="GEO · 08">
                 <div style={{ position: 'relative' }}>
                   <iframe
                     src="./map.html?embed=1"
@@ -1511,9 +1559,6 @@ export function HubPage({
                     style={{
                       display: 'block',
                       width: '100%',
-                      // natural-earth viewBox 是 2:1;略微压扁(2.4:1)让卡片
-                      // 不至于太高,SVG preserveAspectRatio=meet 会自动等比
-                      // 缩放并居中,两侧/上下少量留白可以接受。
                       aspectRatio: '2.4 / 1',
                       maxHeight: 320,
                       border: 'none',
@@ -1531,7 +1576,6 @@ export function HubPage({
                       alignItems: 'flex-end',
                       justifyContent: 'flex-end',
                       padding: 10,
-                      // 透明但接收点击;hover 时浮出 OPEN FULL MAP 提示
                       cursor: 'pointer',
                       textDecoration: 'none',
                     }}
@@ -1572,7 +1616,7 @@ export function HubPage({
             {layoutMode === 'wide' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <CardFrame
-                  title="Alert Center"
+                  title={t('chart.alert_center') || 'Alert Center'}
                   code="ALT · 09"
                   action={
                     <StatusBadge
@@ -1585,13 +1629,13 @@ export function HubPage({
                   <AlertsList alerts={alerts} />
                 </CardFrame>
 
-                <CardFrame title="Heartbeat · 7d" code="HRT · 10">
+                <CardFrame title={`${t('chart.heartbeat') || 'Heartbeat'} · 7d`} code="HRT · 10">
                   <div style={{ padding: 12 }}>
                     <HeartbeatStrip cells={heartbeatCells} />
                   </div>
                 </CardFrame>
 
-                <CardFrame title="Ping Targets" code="LAT · 11">
+                <CardFrame title={t('chart.ping_targets') || 'Ping Targets'} code="LAT · 11">
                   <div style={{ padding: 12 }}>
                     <TargetLatencyList targets={targetSummaries} />
                   </div>
@@ -1613,7 +1657,7 @@ export function HubPage({
               }}
             >
               <CardFrame
-                title="Alert Center"
+                title={t('chart.alert_center') || 'Alert Center'}
                 code="ALT · 09"
                 action={
                   <StatusBadge
@@ -1626,13 +1670,13 @@ export function HubPage({
                 <AlertsList alerts={alerts} />
               </CardFrame>
 
-              <CardFrame title="Heartbeat · 7d" code="HRT · 10">
+              <CardFrame title={`${t('chart.heartbeat') || 'Heartbeat'} · 7d`} code="HRT · 10">
                 <div style={{ padding: 12 }}>
                   <HeartbeatStrip cells={heartbeatCells} />
                 </div>
               </CardFrame>
 
-              <CardFrame title="Ping Targets" code="LAT · 11">
+              <CardFrame title={t('chart.ping_targets') || 'Ping Targets'} code="LAT · 11">
                 <div style={{ padding: 12 }}>
                   <TargetLatencyList targets={targetSummaries} />
                 </div>
