@@ -12,6 +12,8 @@ export interface LoadSeries {
   netIn: number[]
   netOut: number[]
   load: number[]
+  gpu: number[]
+  vram: number[]
 }
 
 export function bucketLoadHistory(
@@ -21,6 +23,8 @@ export function bucketLoadHistory(
 ): LoadSeries {
   const empty = (): number[] => new Array(buckets).fill(0)
   const counts = empty()
+  const gpuCounts = empty()
+  const vramCounts = empty()
   const series: LoadSeries = {
     cpu: empty(),
     ram: empty(),
@@ -28,6 +32,8 @@ export function bucketLoadHistory(
     netIn: empty(),
     netOut: empty(),
     load: empty(),
+    gpu: empty(),
+    vram: empty(),
   }
 
   if (!history?.records?.length) return series
@@ -44,6 +50,8 @@ export function bucketLoadHistory(
     netIn: empty(),
     netOut: empty(),
     load: empty(),
+    gpu: empty(),
+    vram: empty(),
   }
 
   for (const r of history.records) {
@@ -76,30 +84,62 @@ export function bucketLoadHistory(
     if (r.net_in != null) sums.netIn[idx] += r.net_in
     if (r.net_out != null) sums.netOut[idx] += r.net_out
     if (r.load != null) sums.load[idx] += r.load
+    if (r.gpu != null) {
+      sums.gpu[idx] += r.gpu
+      gpuCounts[idx] += 1
+    }
+    if (r.vram != null) {
+      const pct =
+        r.vram <= 100
+          ? r.vram
+          : r.vram_total && r.vram_total > 0
+            ? (r.vram / r.vram_total) * 100
+            : 0
+      sums.vram[idx] += pct
+      vramCounts[idx] += 1
+    }
   }
 
   // Average each filled bucket; for empty buckets, forward-fill the previous
   // value so the curve stays continuous instead of dropping to 0. This fixes
   // the sawtooth seen on the 6H window, where bucket count exceeds the sample
   // count and >half the buckets would otherwise be zero-filled.
-  const keys: (keyof LoadSeries)[] = ['cpu', 'ram', 'disk', 'netIn', 'netOut', 'load']
+  const generalKeys: (keyof LoadSeries)[] = ['cpu', 'ram', 'disk', 'netIn', 'netOut', 'load']
   const last: Record<string, number | null> = {
-    cpu: null, ram: null, disk: null, netIn: null, netOut: null, load: null,
+    cpu: null, ram: null, disk: null, netIn: null, netOut: null, load: null, gpu: null, vram: null,
   }
   for (let i = 0; i < buckets; i++) {
     const n = counts[i]
     if (n > 0) {
-      for (const k of keys) {
+      for (const k of generalKeys) {
         const v = sums[k][i] / n
         series[k][i] = v
         last[k] = v
       }
     } else {
-      // empty bucket — hold the previous value (forward-fill).
-      // leading empties (no prior value) stay 0.
-      for (const k of keys) {
+      for (const k of generalKeys) {
         series[k][i] = last[k] ?? 0
       }
+    }
+
+    // GPU specific averaging and forward fill
+    const nGpu = gpuCounts[i]
+    if (nGpu > 0) {
+      const v = sums.gpu[i] / nGpu
+      series.gpu[i] = v
+      last.gpu = v
+    } else {
+      series.gpu[i] = last.gpu ?? 0
+    }
+
+    // VRAM specific averaging and forward fill
+    const nVram = vramCounts[i]
+    if (nVram > 0) {
+      const v = sums.vram[i] / nVram
+      series.vram[i] = v
+      last.vram = v
+    } else {
+      series.vram[i] = last.vram ?? 0
     }
   }
 

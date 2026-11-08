@@ -142,6 +142,26 @@ export function NodeDetailPage({
     [pingTargets],
   )
 
+  const gpuHist = useMemo(() => {
+    const list = [...buckets.gpu]
+    if (gpuData?.hasGpu && gpuData.averageUsage != null) {
+      const allZero = list.every((v) => v === 0)
+      if (allZero) return list.map(() => gpuData.averageUsage!)
+      list[list.length - 1] = gpuData.averageUsage
+    }
+    return list
+  }, [buckets.gpu, gpuData])
+
+  const vramHist = useMemo(() => {
+    const list = [...buckets.vram]
+    if (gpuData?.hasVram && gpuData.vramPercent != null) {
+      const allZero = list.every((v) => v === 0)
+      if (allZero) return list.map(() => gpuData.vramPercent!)
+      list[list.length - 1] = gpuData.vramPercent
+    }
+    return list
+  }, [buckets.vram, gpuData])
+
   // Global stats for the topbar (must run before any early return — Rules of Hooks).
   const globalOnline = useMemo(() => {
     let n = 0
@@ -783,6 +803,62 @@ export function NodeDetailPage({
                           <DualNetChart up={netUpHist} down={netDownHist} times={bucketTimes} />
                         </ChartOrEmpty>
                       </CardFrame>
+
+                      {gpuData?.hasGpu && (
+                        <>
+                          <CardFrame
+                            title={`${t('chart.title_gpu')} · ${titleSuffix}`}
+                            code="G · 05"
+                            action={
+                              <Etch>
+                                {gpuData.primaryDevice?.name ?? `${gpuData.count} GPU`}
+                              </Etch>
+                            }
+                          >
+                            <ChartOrEmpty empty={!haveLoadHistory && gpuData.averageUsage == null}>
+                              <AreaChart
+                                data={gpuHist}
+                                times={bucketTimes}
+                                formatValue={(v) => `${v.toFixed(1)}%`}
+                                width={400}
+                                height={150}
+                                color="var(--signal-warn)"
+                                yMin={0}
+                                yMax={100}
+                                threshold={85}
+                                gradientId="ndt-gpu"
+                              />
+                            </ChartOrEmpty>
+                          </CardFrame>
+
+                          <CardFrame
+                            title={`${t('chart.title_vram')} · ${titleSuffix}`}
+                            code="G · 06"
+                            action={
+                              <Etch>
+                                {gpuData.totalMemTotal
+                                  ? formatBytes(gpuData.totalMemTotal)
+                                  : 'USAGE %'}
+                              </Etch>
+                            }
+                          >
+                            <ChartOrEmpty empty={!haveLoadHistory && gpuData.vramPercent == null}>
+                              <AreaChart
+                                data={vramHist}
+                                times={bucketTimes}
+                                formatValue={(v) => `${v.toFixed(1)}%`}
+                                width={400}
+                                height={150}
+                                color="#a86fd6"
+                                yMin={0}
+                                yMax={100}
+                                threshold={85}
+                                gradientId="ndt-vram"
+                              />
+                            </ChartOrEmpty>
+                          </CardFrame>
+                        </>
+                      )}
                     </div>
 
                     <div

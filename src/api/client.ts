@@ -24,6 +24,7 @@ export interface LoadRecord {
   time: string; cpu?: number; ram?: number; ram_total?: number; disk?: number; disk_total?: number
   swap?: number; swap_total?: number; load?: number; net_in?: number; net_out?: number
   net_total_up?: number; net_total_down?: number; process?: number; connections?: number; connections_udp?: number
+  gpu?: number; vram?: number; vram_total?: number
 }
 export interface LoadHistory { count: number; records: LoadRecord[] }
 
@@ -145,7 +146,7 @@ export function watchLiveStatus(opts: { onRecord: (uuid: string, record: KomariR
 
 export async function fetchNodeLoadHistory(uuid: string, hours = 1, signal?: AbortSignal): Promise<LoadHistory> {
   const end = new Date(); const start = new Date(end.getTime() - hours * 3_600_000)
-  const response = await metrics.queryMetrics({ agentIds: [uuid], metrics: ['cpu.usage', 'memory.used', 'memory.total', 'disk.used', 'disk.total', 'net.in.rate', 'net.out.rate', 'net.total.up', 'net.total.down', 'load.average', 'process.count', 'connections.tcp', 'connections.udp'], startTime: timestampFromDate(start), endTime: timestampFromDate(end), maxPoints: 500, fillEmpty: false }, signalOptions(signal, 30_000))
+  const response = await metrics.queryMetrics({ agentIds: [uuid], metrics: ['cpu.usage', 'memory.used', 'memory.total', 'disk.used', 'disk.total', 'net.in.rate', 'net.out.rate', 'net.total.up', 'net.total.down', 'load.average', 'process.count', 'connections.tcp', 'connections.udp', 'gpu.usage', 'gpu.utilization', 'gpu.memory.used', 'gpu.memory.total'], startTime: timestampFromDate(start), endTime: timestampFromDate(end), maxPoints: 500, fillEmpty: false }, signalOptions(signal, 30_000))
   const byTime = new Map<string, LoadRecord>()
   for (const series of response.series) for (const point of series.queryPoints) {
     if (point.value == null || !point.observedAt) continue
@@ -163,6 +164,9 @@ export async function fetchNodeLoadHistory(uuid: string, hours = 1, signal?: Abo
     if (series.metric === 'process.count') row.process = point.value
     if (series.metric === 'connections.tcp') row.connections = point.value
     if (series.metric === 'connections.udp') row.connections_udp = point.value
+    if (series.metric === 'gpu.usage' || series.metric === 'gpu.utilization') row.gpu = point.value
+    if (series.metric === 'gpu.memory.used') row.vram = point.value
+    if (series.metric === 'gpu.memory.total') row.vram_total = point.value
   }
   const records = [...byTime.values()].sort((left, right) => left.time.localeCompare(right.time))
   return { count: records.length, records }

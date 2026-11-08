@@ -71,6 +71,10 @@ export function pivotFleetLoad(series: MetricSeries[], buckets: number): Record<
       })
     }
 
+    const gpu = get('gpu.usage', uuid) ?? get('gpu.utilization', uuid) ?? empty()
+    const vramUsed = get('gpu.memory.used', uuid)
+    const vramTotal = get('gpu.memory.total', uuid)
+
     result[uuid] = {
       cpu,
       ram: pct(memUsed, memTotal),
@@ -78,6 +82,8 @@ export function pivotFleetLoad(series: MetricSeries[], buckets: number): Record<
       netIn: get('net.in.rate', uuid) ?? empty(),
       netOut: get('net.out.rate', uuid) ?? empty(),
       load: get('load.average', uuid) ?? empty(),
+      gpu,
+      vram: pct(vramUsed, vramTotal),
     }
   }
 

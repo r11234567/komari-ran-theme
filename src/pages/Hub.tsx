@@ -895,6 +895,24 @@ export function HubPage({
     () => bucketLoadHistory(history.load, BUCKETS, windowMs),
     [history.load, BUCKETS, windowMs],
   )
+  const gpuHist = useMemo(() => {
+    const list = [...buckets.gpu]
+    if (gpuData?.hasGpu && gpuData.averageUsage != null) {
+      const allZero = list.every((v) => v === 0)
+      if (allZero) return list.map(() => gpuData.averageUsage!)
+      list[list.length - 1] = gpuData.averageUsage
+    }
+    return list
+  }, [buckets.gpu, gpuData])
+  const vramHist = useMemo(() => {
+    const list = [...buckets.vram]
+    if (gpuData?.hasVram && gpuData.vramPercent != null) {
+      const allZero = list.every((v) => v === 0)
+      if (allZero) return list.map(() => gpuData.vramPercent!)
+      list[list.length - 1] = gpuData.vramPercent
+    }
+    return list
+  }, [buckets.vram, gpuData])
   const bucketTimes = useMemo(() => {
     const start = Date.now() - windowMs
     const bucketMs = windowMs / BUCKETS
@@ -1544,6 +1562,80 @@ export function HubPage({
                     )}
                   </div>
                 </CardFrame>
+
+                {gpuData?.hasGpu && (
+                  <>
+                    <CardFrame
+                      title={`${t('chart.title_gpu')} · ${windowSpec.label}`}
+                      code="G · 08"
+                      action={
+                        online && gpuData.averageUsage != null ? (
+                          <span
+                            style={{
+                              fontFamily: 'var(--font-mono)',
+                              fontSize: contentFs(11),
+                              color:
+                                gpuData.averageUsage > 80
+                                  ? 'var(--signal-warn)'
+                                  : 'var(--accent-bright)',
+                              fontWeight: 600,
+                              fontVariantNumeric: 'tabular-nums',
+                            }}
+                          >
+                            {gpuData.averageUsage.toFixed(0)}%
+                          </span>
+                        ) : null
+                      }
+                    >
+                      <div style={{ padding: '8px 12px 12px' }}>
+                        <AreaChart
+                          data={gpuHist}
+                          height={120}
+                          times={bucketTimes}
+                          formatValue={formatPctValue}
+                          color="var(--signal-warn)"
+                          yMax={100}
+                          threshold={80}
+                        />
+                      </div>
+                    </CardFrame>
+
+                    <CardFrame
+                      title={`${t('chart.title_vram')} · ${windowSpec.label}`}
+                      code="G · 09"
+                      action={
+                        online && gpuData.vramPercent != null ? (
+                          <span
+                            style={{
+                              fontFamily: 'var(--font-mono)',
+                              fontSize: contentFs(11),
+                              color:
+                                gpuData.vramPercent > 80
+                                  ? 'var(--signal-warn)'
+                                  : 'var(--accent-bright)',
+                              fontWeight: 600,
+                              fontVariantNumeric: 'tabular-nums',
+                            }}
+                          >
+                            {gpuData.vramPercent.toFixed(0)}%
+                          </span>
+                        ) : null
+                      }
+                    >
+                      <div style={{ padding: '8px 12px 12px' }}>
+                        <AreaChart
+                          data={vramHist}
+                          height={120}
+                          times={bucketTimes}
+                          formatValue={formatPctValue}
+                          color="#a86fd6"
+                          yMax={100}
+                          threshold={80}
+                        />
+                      </div>
+                    </CardFrame>
+                  </>
+                )}
               </div>
 
               {/* Geographic Position — 用 iframe 嵌入 ./map.html?embed=1
