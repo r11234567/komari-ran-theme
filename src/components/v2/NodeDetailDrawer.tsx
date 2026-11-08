@@ -31,6 +31,7 @@ import { formatBytes, formatBps, resolveRamPercent, daysUntil } from '@/utils/fo
 import { hashFor, navigate } from '@/router/route'
 import { TrafficBar } from '@/components/atoms/TrafficBar'
 import { computeTrafficQuota } from '@/utils/traffic'
+import { getRecordGpu } from '@/utils/gpu'
 
 interface Props {
   node: KomariNode | null
@@ -248,6 +249,7 @@ export function NodeDetailDrawer({ node, record, onClose }: Props) {
     ?? ''
 
   const quota = computeTrafficQuota(node, record)
+  const gpuData = getRecordGpu(record)
 
   const width = isMobile ? '90vw' : 380
 
@@ -362,6 +364,7 @@ export function NodeDetailDrawer({ node, record, onClose }: Props) {
                 node.os,
                 node.cpu_cores ? `${node.cpu_cores} cores` : null,
                 record?.memory_total ? `${formatBytes(record.memory_total)} RAM` : null,
+                gpuData?.primaryDevice?.name,
               ]
                 .filter(Boolean)
                 .join(' · ')}
@@ -459,6 +462,24 @@ export function NodeDetailDrawer({ node, record, onClose }: Props) {
                   : undefined
               }
             />
+            {gpuData?.hasGpu && (
+              <ProgressRow
+                label="GPU"
+                pct={gpuData.avgUsage}
+                detail={gpuData.primaryDevice?.name}
+              />
+            )}
+            {gpuData?.hasVram && (
+              <ProgressRow
+                label="VRAM"
+                pct={gpuData.vramPct}
+                detail={
+                  gpuData.totalMemUsed !== undefined && gpuData.totalMemTotal
+                    ? `${formatBytes(gpuData.totalMemUsed)} / ${formatBytes(gpuData.totalMemTotal)}`
+                    : undefined
+                }
+              />
+            )}
           </div>
 
           {quota && (

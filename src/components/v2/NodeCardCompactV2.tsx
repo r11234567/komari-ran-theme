@@ -34,6 +34,7 @@ import {
 } from '@/utils/format'
 import { contentFs } from '@/utils/fontScale'
 import { computeTrafficQuota } from '@/utils/traffic'
+import { getRecordGpu } from '@/utils/gpu'
 
 interface Props {
   node: KomariNode
@@ -195,8 +196,9 @@ function NodeCardCompactV2_({
   const labels = parseLabels(node.tags)
   const quota = computeTrafficQuota(node, record)
   const expiry = fmtExpiry(node.expired_at)
+  const gpuData = getRecordGpu(record)
 
-  // Subtitle: OS · cores · RAM · disk (best effort)
+  // Subtitle: OS · cores · RAM · disk · GPU (best effort)
   const subtitleParts: string[] = []
   if (node.os) {
     // Strip "GNU/Linux" and version suffix for compactness
@@ -208,6 +210,9 @@ function NodeCardCompactV2_({
     subtitleParts.push(`${formatBytes(record.memory_total)} RAM`)
   if (record?.disk_total)
     subtitleParts.push(`${formatBytes(record.disk_total)} SSD`)
+  if (gpuData?.primaryDevice?.name) {
+    subtitleParts.push(gpuData.primaryDevice.name)
+  }
 
   const handleClick = () => {
     if (onClick) onClick(node.uuid)
@@ -356,18 +361,20 @@ function NodeCardCompactV2_({
         {subtitleParts.join(' · ') || '—'}
       </div>
 
-      {/* CPU / MEM / DISK row */}
+      {/* CPU / MEM / DISK / (GPU / VRAM if reported) row */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr',
-          gap: 10,
+          gridTemplateColumns: `repeat(${3 + (gpuData?.hasGpu ? 1 : 0) + (gpuData?.hasVram ? 1 : 0)}, 1fr)`,
+          gap: 8,
           marginTop: 1,
         }}
       >
         <InlineProgress label="CPU" pct={record?.cpu} />
         <InlineProgress label="RAM" pct={memPct} />
         <InlineProgress label="DISK" pct={diskPct} />
+        {gpuData?.hasGpu && <InlineProgress label="GPU" pct={gpuData.avgUsage} />}
+        {gpuData?.hasVram && <InlineProgress label="VRAM" pct={gpuData.vramPct} />}
       </div>
 
       {/* Network row */}

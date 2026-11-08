@@ -24,6 +24,7 @@ import { contentFs } from '@/utils/fontScale'
 import { ReadoutGrid } from '@/components/atoms/ReadoutGrid'
 import { TrafficBar } from '@/components/atoms/TrafficBar'
 import { computeTrafficQuota } from '@/utils/traffic'
+import { getRecordGpu } from '@/utils/gpu'
 import {
   daysUntil,
   formatBps,
@@ -267,6 +268,7 @@ export function NodeDetailSidePanel({ node, record, width = 300 }: Props) {
 
   const ip = (node as { ipv4?: string; ipv6?: string }).ipv4 ?? (node as { ip?: string }).ip ?? ''
   const quota = computeTrafficQuota(node, record)
+  const gpuData = getRecordGpu(record)
 
   return (
     <aside
@@ -354,6 +356,7 @@ export function NodeDetailSidePanel({ node, record, width = 300 }: Props) {
             node.os,
             node.cpu_cores ? `${node.cpu_cores}c` : null,
             record?.memory_total ? `${formatBytes(record.memory_total)}` : null,
+            gpuData?.primaryDevice?.name,
           ]
             .filter(Boolean)
             .join(' · ')}
@@ -445,6 +448,24 @@ export function NodeDetailSidePanel({ node, record, width = 300 }: Props) {
                 : undefined
             }
           />
+          {gpuData?.hasGpu && (
+            <ProgressRow
+              label="GPU"
+              pct={gpuData.avgUsage}
+              detail={gpuData.primaryDevice?.name}
+            />
+          )}
+          {gpuData?.hasVram && (
+            <ProgressRow
+              label="VRAM"
+              pct={gpuData.vramPct}
+              detail={
+                gpuData.totalMemUsed !== undefined && gpuData.totalMemTotal
+                  ? `${formatBytes(gpuData.totalMemUsed)} / ${formatBytes(gpuData.totalMemTotal)}`
+                  : undefined
+              }
+            />
+          )}
         </div>
 
         {quota && (

@@ -33,6 +33,7 @@ import { useMemo } from 'react'
 import type { KomariNode, KomariRecord } from '@/types/komari'
 import { daysUntil, resolveRamPercent } from '@/utils/format'
 import { computeTrafficQuota } from '@/utils/traffic'
+import { getRecordGpu } from '@/utils/gpu'
 import { useI18n } from '@/i18n'
 
 export type AlertLevel = 'critical' | 'warning' | 'info'
@@ -47,6 +48,8 @@ export type AlertMetric =
   | 'traffic'
   | 'billing'
   | 'stale'
+  | 'gpu'
+  | 'vram'
 
 export interface AlertItem {
   uuid: string
@@ -296,6 +299,61 @@ function evalNodeAlerts(
         timestampISO,
         score: 65,
       })
+    }
+  }
+
+  // 8b. GPU & VRAM Saturation (auto-hidden if no GPU data present)
+  const gpuData = getRecordGpu(record)
+  if (gpuData) {
+    if (typeof gpuData.avgUsage === 'number') {
+      if (gpuData.avgUsage >= 95) {
+        alerts.push({
+          uuid: node.uuid,
+          name: nodeName,
+          level: 'critical',
+          metric: 'gpu',
+          title: t('alert.high_gpu'),
+          detail: `${Math.round(gpuData.avgUsage)}%`,
+          timestampISO,
+          score: 79,
+        })
+      } else if (gpuData.avgUsage >= 88) {
+        alerts.push({
+          uuid: node.uuid,
+          name: nodeName,
+          level: 'warning',
+          metric: 'gpu',
+          title: t('alert.high_gpu'),
+          detail: `${Math.round(gpuData.avgUsage)}%`,
+          timestampISO,
+          score: 54,
+        })
+      }
+    }
+    if (typeof gpuData.vramPct === 'number') {
+      if (gpuData.vramPct >= 95) {
+        alerts.push({
+          uuid: node.uuid,
+          name: nodeName,
+          level: 'critical',
+          metric: 'vram',
+          title: t('alert.high_vram'),
+          detail: `${Math.round(gpuData.vramPct)}%`,
+          timestampISO,
+          score: 77,
+        })
+      } else if (gpuData.vramPct >= 90) {
+        alerts.push({
+          uuid: node.uuid,
+          name: nodeName,
+          level: 'warning',
+          metric: 'vram',
+          title: t('alert.high_vram'),
+          detail: `${Math.round(gpuData.vramPct)}%`,
+          timestampISO,
+          score: 51,
+        })
+      }
     }
   }
 

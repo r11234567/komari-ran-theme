@@ -63,6 +63,20 @@ export interface KomariNode {
   flag?: string
 }
 
+export interface GpuDevice {
+  name: string
+  memory_used?: number
+  memory_total?: number
+  utilization?: number
+  temperature?: number
+}
+
+export interface GpuInfo {
+  count: number
+  average_usage?: number
+  detailed_info?: GpuDevice[]
+}
+
 /** Normalized flat record — what components consume */
 export interface KomariRecord {
   uuid: string
@@ -96,6 +110,8 @@ export interface KomariRecord {
   ping?: number
   /** Packet loss percent */
   loss?: number
+  /** GPU metrics & device info if available */
+  gpu?: GpuInfo
 }
 
 /** BrowserService public site config */

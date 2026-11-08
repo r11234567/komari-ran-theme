@@ -13,8 +13,8 @@
  * before passing in.
  */
 
+import { useMemo } from 'react'
 import type { KomariNode, KomariRecord } from '@/types/komari'
-import { Etch } from '@/components/atoms/Etch'
 import { contentFs } from '@/utils/fontScale'
 import {
   daysUntil,
@@ -22,6 +22,7 @@ import {
   resolveRamPercent,
 } from '@/utils/format'
 import { useIsMobile } from '@/hooks/useMediaQuery'
+import { getRecordGpu, hasAnyGpu } from '@/utils/gpu'
 
 interface Props {
   nodes: KomariNode[]
@@ -76,6 +77,7 @@ export function NodeRowTable({
   selectedUuid,
 }: Props) {
   const isMobile = useIsMobile()
+  const anyGpu = useMemo(() => hasAnyGpu(records), [records])
 
   const cellPad = '8px 10px'
   const headStyle: React.CSSProperties = {
@@ -122,6 +124,12 @@ export function NodeRowTable({
               <th style={{ ...headStyle, width: 60, textAlign: 'right' }}>CPU</th>
               <th style={{ ...headStyle, width: 60, textAlign: 'right' }}>RAM</th>
               <th style={{ ...headStyle, width: 60, textAlign: 'right' }}>DISK</th>
+              {anyGpu && (
+                <>
+                  <th style={{ ...headStyle, width: 60, textAlign: 'right' }}>GPU</th>
+                  <th style={{ ...headStyle, width: 60, textAlign: 'right' }}>VRAM</th>
+                </>
+              )}
               {!isMobile && (
                 <>
                   <th style={{ ...headStyle, width: 90, textAlign: 'right' }}>
@@ -178,6 +186,9 @@ export function NodeRowTable({
                     ? (r.disk_used / r.disk_total) * 100
                     : undefined
                 const disk = pctCell(diskPct)
+                const gpuData = getRecordGpu(r)
+                const gpu = pctCell(gpuData?.avgUsage)
+                const vram = pctCell(gpuData?.vramPct)
                 const exp = fmtExpire(n.expired_at)
                 const isSelected = selectedUuid === n.uuid
 
@@ -260,6 +271,16 @@ export function NodeRowTable({
                     <td style={{ ...bodyCell, color: disk.color, textAlign: 'right' }}>
                       {disk.text}
                     </td>
+                    {anyGpu && (
+                      <>
+                        <td style={{ ...bodyCell, color: gpu.color, textAlign: 'right' }}>
+                          {gpu.text}
+                        </td>
+                        <td style={{ ...bodyCell, color: vram.color, textAlign: 'right' }}>
+                          {vram.text}
+                        </td>
+                      </>
+                    )}
                     {!isMobile && (
                       <>
                         <td

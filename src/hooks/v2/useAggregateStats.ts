@@ -23,6 +23,7 @@
 import { useMemo } from 'react'
 import type { KomariNode, KomariRecord } from '@/types/komari'
 import { daysUntil, resolveRamPercent } from '@/utils/format'
+import { getRecordGpu } from '@/utils/gpu'
 
 export interface AggregateStats {
   /** Node counts */
@@ -72,6 +73,11 @@ export function isRecordDegraded(rec: KomariRecord | undefined): boolean {
   // Disk capacity >= 90%
   if (rec.disk_used && rec.disk_total && rec.disk_total > 0) {
     if ((rec.disk_used / rec.disk_total) * 100 > 90) return true
+  }
+  const gpuData = getRecordGpu(rec)
+  if (gpuData) {
+    if (typeof gpuData.avgUsage === 'number' && gpuData.avgUsage > 90) return true
+    if (typeof gpuData.vramPct === 'number' && gpuData.vramPct > 90) return true
   }
   return false
 }

@@ -139,6 +139,19 @@ export const MOCK_RECORDS: Record<string, KomariRecord> = {
     ping: 15,
     loss: 0.6,
     uptime: 15_898_320,
+    gpu: {
+      count: 1,
+      average_usage: 96,
+      detailed_info: [
+        {
+          name: 'NVIDIA GeForce RTX 4090',
+          memory_total: 25_769_803_776,
+          memory_used: 24_696_061_952,
+          utilization: 96,
+          temperature: 78,
+        },
+      ],
+    },
   },
   A3D24E91: {
     uuid: 'A3D24E91',
@@ -161,6 +174,26 @@ export const MOCK_RECORDS: Record<string, KomariRecord> = {
     ping: 38,
     loss: 0,
     uptime: 8_010_720,
+    gpu: {
+      count: 2,
+      average_usage: 42,
+      detailed_info: [
+        {
+          name: 'NVIDIA A100-SXM4-80GB',
+          memory_total: 85_899_345_920,
+          memory_used: 36_077_725_286,
+          utilization: 45,
+          temperature: 55,
+        },
+        {
+          name: 'NVIDIA A100-SXM4-80GB',
+          memory_total: 85_899_345_920,
+          memory_used: 34_359_738_368,
+          utilization: 39,
+          temperature: 53,
+        },
+      ],
+    },
   },
   F47C1B82: {
     uuid: 'F47C1B82',

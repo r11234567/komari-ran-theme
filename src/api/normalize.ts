@@ -43,12 +43,32 @@ const STREAM_SIGNIFICANT_FIELDS: (keyof KomariRecord)[] = [
   'message',
 ]
 
+function isSameGpu(a?: KomariRecord['gpu'], b?: KomariRecord['gpu']): boolean {
+  if (!a && !b) return true
+  if (!a || !b) return false
+  if (a.count !== b.count || a.average_usage !== b.average_usage) return false
+  const aList = a.detailed_info ?? []
+  const bList = b.detailed_info ?? []
+  if (aList.length !== bList.length) return false
+  for (let i = 0; i < aList.length; i++) {
+    if (
+      aList[i].name !== bList[i].name ||
+      aList[i].utilization !== bList[i].utilization ||
+      aList[i].memory_used !== bList[i].memory_used ||
+      aList[i].memory_total !== bList[i].memory_total
+    ) {
+      return false
+    }
+  }
+  return true
+}
+
 /** True when two records are visually identical (ignoring updated_at/uptime). */
 export function wsRecordEqual(a: KomariRecord, b: KomariRecord): boolean {
   for (const k of STREAM_SIGNIFICANT_FIELDS) {
     if (a[k] !== b[k]) return false
   }
-  return true
+  return isSameGpu(a.gpu, b.gpu)
 }
 
 /** "JP-TYO" → "JP". Returns the 2-letter prefix or undefined. */

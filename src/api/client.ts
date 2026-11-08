@@ -61,6 +61,37 @@ export function recordFromReport(uuid: string, online: boolean, report?: AgentRe
   const resources = report?.resources
   const network = latestNetwork(report)
   const disk = latestDisk(report)
+
+  let gpu: KomariRecord['gpu'] = undefined
+  const gpus =
+    resources?.gpus ??
+    (report as unknown as { gpus?: Array<{ name?: string; utilizationPercent?: number; memoryTotalBytes?: bigint | number; memoryUsedBytes?: bigint | number; temperatureCelsius?: number }> })?.gpus
+  if (Array.isArray(gpus) && gpus.length > 0) {
+    let sumUtil = 0
+    let countUtil = 0
+    const detailed = gpus.map((g) => {
+      const util = typeof g.utilizationPercent === 'number' ? g.utilizationPercent : undefined
+      if (util !== undefined) {
+        sumUtil += util
+        countUtil += 1
+      }
+      return {
+        name: g.name || 'GPU',
+        memory_total: g.memoryTotalBytes != null ? Number(g.memoryTotalBytes) : undefined,
+        memory_used: g.memoryUsedBytes != null ? Number(g.memoryUsedBytes) : undefined,
+        utilization: util,
+        temperature: typeof g.temperatureCelsius === 'number' ? g.temperatureCelsius : undefined,
+      }
+    })
+    gpu = {
+      count: detailed.length,
+      average_usage: countUtil > 0 ? sumUtil / countUtil : undefined,
+      detailed_info: detailed,
+    }
+  } else if ((report as unknown as { gpu?: KomariRecord['gpu'] })?.gpu) {
+    gpu = (report as unknown as { gpu?: KomariRecord['gpu'] }).gpu
+  }
+
   return {
     uuid, online, cpu: resources?.cpuPercent, memory_used: asNumber(resources?.memoryUsedBytes),
     memory_total: asNumber(report?.system?.memoryTotalBytes), swap_used: asNumber(resources?.swapUsedBytes),
@@ -72,6 +103,7 @@ export function recordFromReport(uuid: string, online: boolean, report?: AgentRe
     uptime: report?.system?.uptime ? Number(report.system.uptime.seconds) : undefined,
     process: asNumber(resources?.processCount), os: report?.system?.os, cpu_model: report?.system?.hostname,
     message: report?.diagnosticMessage, updated_at: report?.observedAt ? timestampDate(report.observedAt).toISOString() : undefined,
+    gpu,
   }
 }
 

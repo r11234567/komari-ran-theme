@@ -17,6 +17,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import type { KomariNode, KomariRecord } from '@/types/komari'
 import { resolveRamPercent } from '@/utils/format'
+import { getRecordGpu } from '@/utils/gpu'
 
 interface CpuSample {
   t: number    // epoch ms
@@ -36,6 +37,8 @@ export interface DegradedInfo {
     highMem: boolean
     highPing: boolean
     highLoss: boolean
+    highGpu?: boolean
+    highVram?: boolean
   }
 }
 
@@ -134,11 +137,15 @@ export function useDegradedDetection(
       const highPing = typeof r.ping === 'number' && r.ping > pingThreshold
       const highLoss = typeof r.loss === 'number' && r.loss > lossThreshold
 
-      const degraded = sustainedHighCpu || highMem || highPing || highLoss
+      const gpuData = getRecordGpu(r)
+      const highGpu = typeof gpuData?.avgUsage === 'number' && gpuData.avgUsage > 90
+      const highVram = typeof gpuData?.vramPct === 'number' && gpuData.vramPct > 90
+
+      const degraded = sustainedHighCpu || highMem || highPing || highLoss || highGpu || highVram
 
       out[node.uuid] = {
         degraded,
-        reasons: { sustainedHighCpu, highMem, highPing, highLoss },
+        reasons: { sustainedHighCpu, highMem, highPing, highLoss, highGpu, highVram },
       }
     }
 

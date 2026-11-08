@@ -20,6 +20,23 @@ export const Icon: Record<string, ReactNode> = {
       <path d="M5 1V3 M9 1V3 M5 11V13 M9 11V13 M1 5H3 M1 9H3 M11 5H13 M11 9H13" stroke="currentColor" strokeWidth="1" />
     </svg>
   ),
+  gpu: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <rect x="1.5" y="3" width="11" height="8" rx="1" stroke="currentColor" strokeWidth="1" />
+      <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="0.8" />
+      <path d="M7 5.5V8.5 M5.5 7H8.5" stroke="currentColor" strokeWidth="0.6" opacity="0.6" />
+      <path d="M4 11V13 M6 11V13 M8 11V13 M10 11V13" stroke="currentColor" strokeWidth="0.9" />
+      <path d="M1.5 5H0.5" stroke="currentColor" strokeWidth="1" />
+    </svg>
+  ),
+  vram: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <rect x="2" y="3" width="10" height="8" rx="0.5" stroke="currentColor" strokeWidth="1" />
+      <rect x="4" y="5" width="2.5" height="4" fill="currentColor" opacity="0.4" />
+      <rect x="7.5" y="5" width="2.5" height="4" fill="currentColor" opacity="0.4" />
+      <path d="M3.5 1V3 M6 1V3 M8 1V3 M10.5 1V3 M3.5 11V13 M6 11V13 M8 11V13 M10.5 11V13" stroke="currentColor" strokeWidth="0.8" />
+    </svg>
+  ),
   mem: (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
       <rect x="2" y="4" width="10" height="6" stroke="currentColor" strokeWidth="1" />
