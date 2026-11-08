@@ -126,6 +126,26 @@ export function NodesV2Page({
     return out
   }, [history1h.byNode])
 
+  const gpuSparkByNode = useMemo(() => {
+    const out: Record<string, number[]> = {}
+    for (const [uuid, series] of Object.entries(history1h.byNode)) {
+      if (series.gpu && series.gpu.length > 0) {
+        out[uuid] = series.gpu
+      }
+    }
+    return out
+  }, [history1h.byNode])
+
+  const vramSparkByNode = useMemo(() => {
+    const out: Record<string, number[]> = {}
+    for (const [uuid, series] of Object.entries(history1h.byNode)) {
+      if (series.vram && series.vram.length > 0) {
+        out[uuid] = series.vram
+      }
+    }
+    return out
+  }, [history1h.byNode])
+
   // ── Filter option sets ──
   const regionOptions = useMemo(() => {
     const set: Record<string, number> = {}
@@ -530,6 +550,8 @@ export function NodesV2Page({
                         node={n}
                         record={records[n.uuid]}
                         netSpark={netSpark}
+                        gpuSpark={gpuSparkByNode[n.uuid]}
+                        vramSpark={vramSparkByNode[n.uuid]}
                         pingSpark={history1h.pingByNode[n.uuid]}
                         pingLoss={history1h.pingLossByNode[n.uuid]}
                         pingStats={history1h.pingStatsByNode[n.uuid]}

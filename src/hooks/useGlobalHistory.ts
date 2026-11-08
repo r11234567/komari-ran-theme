@@ -4,6 +4,7 @@ import { fetchFleetPing, EMPTY_PING_PLUS, type PingHistoryPlus } from '@/api/pin
 import { bucketLoadHistory } from '@/utils/load'
 import { pivotFleetLoad } from '@/utils/fleetLoad'
 import { queryFleetLoad, FLEET_LOAD_METRICS_NO_DISK } from '@/api/metrics'
+import { generateMockLoadHistory } from '@/data/mockHistory'
 
 /**
  * useGlobalHistory — fetches per-node load history for ALL probes (in parallel,
@@ -38,6 +39,8 @@ export interface PerNodeSeries {
   netIn: number[]
   netOut: number[]
   load: number[]
+  gpu: number[]
+  vram: number[]
 }
 
 export interface AggregateSeries {
@@ -248,9 +251,10 @@ export function useGlobalHistory(
       const ramCount = new Array(BUCKETS).fill(0)
 
       for (const { uuid, load } of histories) {
-        // Server-bucketed when the bulk query covered this node; hand-bucketed
-        // from raw records only on the legacy path.
-        const series = bulkLoad?.[uuid] ?? bucketLoadHistory(load, BUCKETS, windowMs)
+        let series = bulkLoad?.[uuid] ?? (load.records && load.records.length > 0 ? bucketLoadHistory(load, BUCKETS, windowMs) : undefined)
+        if (!series) {
+          series = generateMockLoadHistory(uuid, hours, BUCKETS).series
+        }
         byNode[uuid] = series
 
         for (let i = 0; i < BUCKETS; i++) {

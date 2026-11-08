@@ -41,6 +41,10 @@ interface Props {
   record?: KomariRecord
   /** Network sparkline data (e.g. last 30s combined throughput) */
   netSpark?: number[]
+  /** GPU usage sparkline data (0..100) */
+  gpuSpark?: number[]
+  /** VRAM usage sparkline data (0..100) */
+  vramSpark?: number[]
   /** Click handler — typically opens NodeDetailDrawer */
   onClick?: (uuid: string) => void
   /** True when this card is in a "selected/highlighted" state */
@@ -180,6 +184,8 @@ function NodeCardCompactV2_({
   node,
   record,
   netSpark,
+  gpuSpark,
+  vramSpark,
   onClick,
   selected,
 }: Props) {
@@ -417,6 +423,59 @@ function NodeCardCompactV2_({
           </div>
         )}
       </div>
+
+      {/* GPU / VRAM Sparkline trend row — only rendered if node reports GPU */}
+      {gpuData?.hasGpu && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: gpuData.hasVram ? '1fr 1fr' : '1fr',
+            gap: 10,
+            marginTop: 3,
+            paddingTop: 6,
+            borderTop: '1px solid var(--edge-engrave)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+              <span style={{ fontSize: contentFs(10), color: 'var(--signal-warn)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>GPU</span>
+              <span className="mono tnum" style={{ fontSize: contentFs(11), color: 'var(--fg-0)' }}>
+                {gpuData.avgUsage != null ? `${Math.round(gpuData.avgUsage)}%` : '—'}
+              </span>
+            </div>
+            {gpuSpark && gpuSpark.length > 0 && (
+              <div style={{ width: 64, height: 14, flexShrink: 0 }}>
+                <Sparkline
+                  data={gpuSpark}
+                  color="var(--signal-warn)"
+                  height={14}
+                  responsive
+                />
+              </div>
+            )}
+          </div>
+          {gpuData.hasVram && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                <span style={{ fontSize: contentFs(10), color: 'var(--accent-bright)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>VRAM</span>
+                <span className="mono tnum" style={{ fontSize: contentFs(11), color: 'var(--fg-0)' }}>
+                  {gpuData.vramPct != null ? `${Math.round(gpuData.vramPct)}%` : '—'}
+                </span>
+              </div>
+              {vramSpark && vramSpark.length > 0 && (
+                <div style={{ width: 64, height: 14, flexShrink: 0 }}>
+                  <Sparkline
+                    data={vramSpark}
+                    color="var(--accent-bright)"
+                    height={14}
+                    responsive
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* traffic quota — only when the admin set a threshold (0 = unlimited) */}
       {quota && <TrafficBar quota={quota} variant="compact" />}

@@ -7,11 +7,14 @@ import type { KomariNode, KomariRecord, NodeStatus } from '@/types/komari'
 import { formatBps, formatBytes, formatPercent, formatUptimeShort, parseLabels, daysUntil } from '@/utils/format'
 import { contentFs } from '@/utils/fontScale'
 import { computeTrafficQuota } from '@/utils/traffic'
+import { getRecordGpu } from '@/utils/gpu'
 
 interface Props {
   node: KomariNode
   record?: KomariRecord
   netSpark?: number[]
+  gpuSpark?: number[]
+  vramSpark?: number[]
   pingSpark?: number[]
   pingLoss?: number[]
   /** Derived Ping summary from the typed metrics query. */
@@ -93,12 +96,22 @@ function MetricCell({
   )
 }
 
-function NodeCardCompact_({ node, record, netSpark = [], pingSpark = [], pingLoss = [], pingStats }: Props) {
+function NodeCardCompact_({
+  node,
+  record,
+  netSpark = [],
+  gpuSpark = [],
+  vramSpark = [],
+  pingSpark = [],
+  pingLoss = [],
+  pingStats,
+}: Props) {
   const status = deriveStatus(record)
   const quota = computeTrafficQuota(node, record)
   const offline = status === 'bad'
   const statusColor = COLOR_BY_STATUS[status]
   const labels = parseLabels(node.tags)
+  const gpuData = getRecordGpu(record)
 
   // mem percent: prefer used/total, else direct cpu... no, only mem
   const memPct =
@@ -275,6 +288,32 @@ function NodeCardCompact_({ node, record, netSpark = [], pingSpark = [], pingLos
           />
         </div>
       </div>
+
+      {/* GPU + VRAM sparklines (if node reports GPU) */}
+      {gpuData?.hasGpu && (
+        <div style={{ display: 'grid', gridTemplateColumns: gpuData.hasVram ? '1fr 1fr' : '1fr', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <span style={{ fontSize: contentFs(11), color: 'var(--signal-warn)', fontFamily: 'var(--font-mono)' }}>GPU · 趋势</span>
+              <span className="mono tnum" style={{ fontSize: contentFs(11), color: 'var(--fg-0)' }}>
+                {gpuData.avgUsage != null ? `${Math.round(gpuData.avgUsage)}%` : '—'}
+              </span>
+            </div>
+            <Sparkline data={gpuSpark} width={150} height={14} color="var(--signal-warn)" thickness={1} />
+          </div>
+          {gpuData.hasVram && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: contentFs(11), color: 'var(--accent-bright)', fontFamily: 'var(--font-mono)' }}>显存 · 趋势</span>
+                <span className="mono tnum" style={{ fontSize: contentFs(11), color: 'var(--fg-0)' }}>
+                  {gpuData.vramPct != null ? `${Math.round(gpuData.vramPct)}%` : '—'}
+                </span>
+              </div>
+              <Sparkline data={vramSpark} width={150} height={14} color="var(--accent-bright)" thickness={1} />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* total traffic */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: contentFs(11) }}>

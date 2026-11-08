@@ -437,6 +437,8 @@ export function OverviewPage({
                     node={node}
                     record={records[node.uuid]}
                     netSpark={history?.byNode[node.uuid]?.netOut ?? []}
+                    gpuSpark={history?.byNode[node.uuid]?.gpu ?? []}
+                    vramSpark={history?.byNode[node.uuid]?.vram ?? []}
                     pingSpark={history?.pingByNode[node.uuid] ?? []}
                     pingLoss={history?.pingLossByNode[node.uuid] ?? []}
                     pingStats={history?.pingStatsByNode[node.uuid]}
@@ -456,6 +458,8 @@ export function OverviewPage({
                     node={node}
                     record={records[node.uuid]}
                     netSpark={history?.byNode[node.uuid]?.netOut ?? []}
+                    gpuSpark={history?.byNode[node.uuid]?.gpu ?? []}
+                    vramSpark={history?.byNode[node.uuid]?.vram ?? []}
                     pingSpark={history?.pingByNode[node.uuid] ?? []}
                     pingLoss={history?.pingLossByNode[node.uuid] ?? []}
                     pingStats={history?.pingStatsByNode[node.uuid]}

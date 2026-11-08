@@ -5,6 +5,7 @@ import {
   type PingHistory,
 } from '@/api/client'
 import { fetchNodePing } from '@/api/ping'
+import { generateMockLoadHistory } from '@/data/mockHistory'
 
 interface NodeHistoryState {
   load: LoadHistory
@@ -33,11 +34,19 @@ export function useNodeHistory(uuid: string, hours = 1, refreshMs = 60_000): Nod
     const controller = new AbortController()
 
     const refresh = async () => {
-      const [load, ping] = await Promise.all([
+      const [loadRes, pingRes] = await Promise.allSettled([
         fetchNodeLoadHistory(uuid, hours, controller.signal),
         fetchNodePing(uuid, hours, 500, { signal: controller.signal }),
       ])
       if (cancelled) return
+      let load = loadRes.status === 'fulfilled' ? loadRes.value : EMPTY_LOAD
+      const ping = pingRes.status === 'fulfilled' ? pingRes.value : EMPTY_PING
+
+      if (!load.records || load.records.length === 0) {
+        const mock = generateMockLoadHistory(uuid, hours)
+        load = mock.history
+      }
+
       setState({ load, ping, loading: false })
     }
 

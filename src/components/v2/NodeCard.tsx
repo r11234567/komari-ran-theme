@@ -27,6 +27,8 @@ interface Props {
   /** Net throughput sparkline data — passed through to compact variant.
    *  Classic variant uses its own internal sparkline via pingSpark. */
   netSpark?: number[]
+  gpuSpark?: number[]
+  vramSpark?: number[]
   pingSpark?: number[]
   pingLoss?: number[]
   pingStats?: { avg?: number; loss: number; taskName?: string }
@@ -39,6 +41,8 @@ function NodeCard_({
   node,
   record,
   netSpark,
+  gpuSpark,
+  vramSpark,
   pingSpark,
   pingLoss,
   pingStats,
@@ -55,6 +59,8 @@ function NodeCard_({
         node={node}
         record={record}
         netSpark={netSpark}
+        gpuSpark={gpuSpark}
+        vramSpark={vramSpark}
         onClick={onClick}
         selected={selected}
       />
@@ -87,6 +93,9 @@ function NodeCard_({
       <NodeCardClassic
         node={node}
         record={record}
+        netSpark={netSpark}
+        gpuSpark={gpuSpark}
+        vramSpark={vramSpark}
         pingSpark={pingSpark}
         pingLoss={pingLoss}
         pingStats={pingStats}

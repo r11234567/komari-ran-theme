@@ -14,11 +14,14 @@ import {
   formatUptimeShort,
   resolveRamPercent,
 } from '@/utils/format'
+import { getRecordGpu } from '@/utils/gpu'
 
 interface Props {
   node: KomariNode
   record?: KomariRecord
   netSpark?: number[]
+  gpuSpark?: number[]
+  vramSpark?: number[]
   pingSpark?: number[]
   pingLoss?: number[]
   /** Derived Ping summary from the typed metrics query. */
@@ -29,7 +32,16 @@ interface Props {
  * NodeCardRow — single-row layout. Wide horizontal: status / name+os /
  * region / CPU / MEM / DISK / NET / PING+LOSS / status badge + uptime.
  */
-function NodeCardRow_({ node, record, netSpark = [], pingSpark = [], pingLoss = [], pingStats }: Props) {
+function NodeCardRow_({
+  node,
+  record,
+  netSpark = [],
+  gpuSpark = [],
+  vramSpark = [],
+  pingSpark = [],
+  pingLoss = [],
+  pingStats,
+}: Props) {
   const online = record?.online === true
   const cpu = record?.cpu ?? 0
   const ramPct = resolveRamPercent(record?.memory_used, record?.memory_total) ?? 0
@@ -37,6 +49,7 @@ function NodeCardRow_({ node, record, netSpark = [], pingSpark = [], pingLoss = 
     record?.disk_used != null && record?.disk_total
       ? (record.disk_used / record.disk_total) * 100
       : 0
+  const gpuData = getRecordGpu(record)
 
   const statusKey: 'good' | 'warn' | 'bad' = !online
     ? 'bad'
@@ -53,7 +66,7 @@ function NodeCardRow_({ node, record, netSpark = [], pingSpark = [], pingLoss = 
       className="precision-card"
       style={{
         display: 'grid',
-        gridTemplateColumns: '20px 220px 90px 1fr 1fr 1fr 1fr 130px 100px',
+        gridTemplateColumns: `20px 220px 90px 1fr 1fr 1fr 1fr ${gpuData?.hasGpu ? '1fr ' : ''}130px 100px`,
         alignItems: 'center',
         padding: '12px 14px',
         gap: 14,
@@ -156,6 +169,26 @@ function NodeCardRow_({ node, record, netSpark = [], pingSpark = [], pingLoss = 
           {online ? `${formatBps(record?.network_tx)} / ${formatBps(record?.network_rx)}` : '—'}
         </span>
       </div>
+
+      {gpuData?.hasGpu && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+          <Etch color="var(--signal-warn)">GPU · VRAM</Etch>
+          <Sparkline data={gpuSpark.length > 0 ? gpuSpark : vramSpark} width={120} height={18} color="var(--signal-warn)" thickness={1} />
+          <span
+            className="mono tnum"
+            style={{
+              fontSize: contentFs(10),
+              color: 'var(--fg-1)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {gpuData.avgUsage != null ? `${Math.round(gpuData.avgUsage)}%` : '—'}
+            {gpuData.vramPct != null ? ` / ${Math.round(gpuData.vramPct)}%` : ''}
+          </span>
+        </div>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
         <Etch>PING · LOSS</Etch>
